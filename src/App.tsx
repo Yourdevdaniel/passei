@@ -117,8 +117,9 @@ export default function App() {
   const corpo = useRef<HTMLDivElement>(null);
   useAnim(() => { // entrada de cada tela
     if (!corpo.current) return;
-    gsap.from(corpo.current.querySelectorAll('.anim-in'), { y: 22, opacity: 0, duration: .5, stagger: .05, ease: 'power3.out', clearProps: 'transform,opacity' });
-    gsap.from(corpo.current.querySelectorAll('.barra'), { scaleX: 0, duration: 1.1, delay: .4, ease: 'power3.inOut', clearProps: 'transform' });
+    const entradas = corpo.current.querySelectorAll('.anim-in'), barras = corpo.current.querySelectorAll('.barra');
+    if (entradas.length) gsap.from(entradas, { y: 22, opacity: 0, duration: .5, stagger: .05, ease: 'power3.out', clearProps: 'transform,opacity' });
+    if (barras.length) gsap.from(barras, { scaleX: 0, duration: 1.1, delay: .4, ease: 'power3.inOut', clearProps: 'transform' });
   }, [tela, aba, db.cur, db.semestre]);
 
   const nova = () => {

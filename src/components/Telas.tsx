@@ -92,7 +92,7 @@ export function CreditosView({ db, setDb, abrir, nova }: Nav & { db: Db; setDb: 
       <Img name="creditos" className="ph-img" />
     </div>
     <p className="nota-est anim-in"><b>São estimativas.</b> Você preenche os créditos de cada disciplina e o valor do crédito. Os valores oficiais são os do seu boleto e do portal da ULBRA.</p>
-    <div className="stats">
+    <div className="stats credit-stats">
       <div className="card stat anim-in"><small>Valor do crédito (R$)</small>
         <Inp className="big" label="Valor do crédito em reais" placeholder="digite" value={db.valorCredito} onChange={v => setDb(p => ({ ...p, valorCredito: v }))} /></div>
       <div className="card stat anim-in"><small>Créditos no semestre</small><b>{fmt(total)}</b></div>
