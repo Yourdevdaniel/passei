@@ -1,5 +1,7 @@
 // Leitura do PDF ou print das notas, toda no navegador.
-// As bibliotecas pesadas (pdf.js, tesseract.js) vêm por CDN só quando alguém importa um arquivo.
+// As bibliotecas pesadas (pdf.js, tesseract.js) são servidas pelo próprio app em /vendor
+// (copiadas por scripts/vendor.mjs) e só carregam quando alguém importa um arquivo.
+const vendor = (p: string) => new URL(`${import.meta.env.BASE_URL}vendor/${p}`, location.href).href;
 
 declare global {
   interface Window { Tesseract: any; pdfjsLib: any }
@@ -53,9 +55,10 @@ export function textoDaPagina(itens: ItemPdf[]): string {
 }
 
 async function ocr(imgs: (File | HTMLCanvasElement)[], prog: Prog) {
-  await script('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js');
+  await script(vendor('tesseract/tesseract.min.js'));
   let i = 0, txt = '';
   const w = await window.Tesseract.createWorker('por', 1, {
+    workerPath: vendor('tesseract/worker.min.js'), corePath: vendor('tesseract/core'), langPath: vendor('tesseract/lang'),
     logger: (m: { status: string; progress: number }) => m.status === 'recognizing text' && prog((i + m.progress) / imgs.length, 'Lendo as notas…'),
   });
   try {
@@ -68,8 +71,8 @@ export async function lerArquivo(file: File, prog: Prog): Promise<string> {
   if (file.type.startsWith('image/') || /\.(png|jpe?g|webp|gif|bmp|tiff?)$/i.test(file.name)) { prog(0, 'Preparando leitura…'); return ocr([file], prog); }
   if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) {
     prog(0, 'Abrindo PDF…');
-    await script('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js');
-    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    await script(vendor('pdfjs/pdf.min.js'));
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = vendor('pdfjs/pdf.worker.min.js');
     const pdf = await window.pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
     try {
     let txt = '';

@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 
 const scripts: any[] = [];
 beforeEach(() => {
-  vi.resetModules(); scripts.length = 0;
+  vi.resetModules(); scripts.length = 0; vi.stubGlobal('location', { href: 'https://passei.test/' });
   vi.stubGlobal('document', { createElement: () => ({ remove: vi.fn() }), head: { appendChild: (s: any) => scripts.push(s) } });
 });
 afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
