@@ -1,7 +1,8 @@
+import { readFileSync } from 'node:fs';
 import { expect, test } from 'vitest';
 import { parseImportacao, aplicarImportacao } from './importacao';
-import { normalizar, novaDisc } from './store';
-import type { Db } from './logic';
+import { normalizar, novaDisc, resumoCurto } from './store';
+import { avaliar, calcGrau, type Db } from './logic';
 
 test('boletim preserva colunas, zeros e pendências sem inventar semestre', () => {
   const p = parseImportacao(`WebAluno\nNotas\nDisciplina 1º 2º Média EXAME Média Final Situação Freq
@@ -118,4 +119,51 @@ test('opção de páginas juntas também aceita uma ou duas fontes e texto achat
   expect(p.boletim).toHaveLength(2);
   expect(parseImportacao(paginasJuntas[2], 'misto').materias).toHaveLength(1);
   expect(() => parseImportacao('sem notas', 'misto')).toThrow();
+});
+
+const bancoCanvas = readFileSync(new URL('./fixtures/canvas-banco.txt', import.meta.url), 'utf8');
+
+test('G2 N/A limpa nota antiga e não anuncia aprovação com G1 ainda pendente', () => {
+  const d = novaDisc('Banco de Dados Avançado', '2026/2');
+  d.g2 = { ...d.g2, trabMax: '0', prova: '6,7' }; d.sub = '9';
+  d.webAluno = { g2: [{ nome: 'G2', peso: '10', nota: '' }] };
+  const p = parseImportacao(bancoCanvas);
+  expect(p.materias[0].curso).toBe('25595 - BANCO DE DADOS AVANÇADO');
+  expect(p.materias[0].g2).toBeDefined();
+  expect(calcGrau(p.materias[0].g2!).v).toBeNull();
+  const db = aplicarImportacao({ cur: 0, lista: [d], semestre: '2026/2', valorCredito: '' }, p);
+  expect(db.lista).toHaveLength(1);
+  const atual = db.lista[0], r = avaliar(atual);
+  expect(r.G2).toBeNull();
+  expect(r.G1).toBeNull();
+  expect(r.g1.known).toBeCloseTo(5.6);
+  expect(r.g1.pend.filter(p => p.max > 0).map(p => p.max)).toEqual([1.5, 1.5]);
+  expect(r.status).toBe('vazio');
+  expect(resumoCurto(r).label).toBe('Em andamento');
+  expect(atual.g1.itens.every(i => i.max !== '0')).toBe(true);
+  expect(atual.sub).toBe('');
+  expect(atual.webAluno).toEqual(d.webAluno);
+  expect(atual.g1.itens).toEqual(expect.arrayContaining([
+    expect.objectContaining({ nome: 'Trabalho 01', nota: '1', max: '1' }),
+    expect.objectContaining({ nome: 'Atividade Avaliativa 01', nota: '', max: '1,5' }),
+    expect.objectContaining({ nome: 'G1', nota: '4,6', max: '6', tipo: 'prova' }),
+  ]));
+});
+
+test.each(['G1 65,88% 5,60 / 8,50\nG2 N/A 0,00 / 0,00', 'G1 65,88% 5,60 / 8,50 G2 N/A 0,00 / 0,00'])('resumo N/A também deixa a G2 pendente: %s', txt => {
+  const p = parseImportacao(txt).materias[0];
+  expect(p.g2).toBeDefined();
+  expect(calcGrau(p.g2!).v).toBeNull();
+});
+
+test('grau ausente de um recorte não apaga uma nota anterior', () => {
+  const d = novaDisc('Banco de Dados Avançado', '2026/2');
+  d.g2 = { ...d.g2, trabMax: '0', prova: '6,7' };
+  const p = parseImportacao('Notas para Aluno\n25595 - BANCO DE DADOS AVANÇADO\nG1 65,88% 5,60 / 8,50');
+  const db = aplicarImportacao({ cur: 0, lista: [d], semestre: '2026/2', valorCredito: '' }, p);
+  expect(calcGrau(db.lista[0].g2).v).toBe(6.7);
+});
+
+test('a tabela de pesos sozinha não é uma página com notas', () => {
+  expect(() => parseImportacao('As tarefas são ponderadas por grupo:\nGrupo Peso\nG1 33%\nG2 67%\nTotal 100%')).toThrow();
 });

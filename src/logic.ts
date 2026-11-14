@@ -102,26 +102,42 @@ export function simular(G1: number, g2Trab: number, g2Extra: number, g2ProvaMax:
   return { alvo, prova: alvo - g2Trab - g2Extra, provaMax: g2ProvaMax };
 }
 
-const tipoDe = (nome: string): Tipo => /extra|b[ôo]nus/i.test(nome) ? 'extra' : /prova|exame|avalia[çc][ãa]o|teste/i.test(nome) ? 'prova' : 'trab';
+const tipoDe = (nome: string): Tipo => /extra|b[ôo]nus/i.test(nome) ? 'extra' : /^G[12]$|prova|exame|avalia[çc][ãa]o|teste/i.test(nome) ? 'prova' : 'trab';
 
 export interface Importado { g1?: Grau; g2?: Grau; sub?: string; curso?: string; avisos: string[] }
 
 // Lê a página de notas do Canvas: texto copiado, PDF com texto ou texto vindo do OCR
 export function parseCanvas(txt: string): Importado {
+  const notas = txt.split(/As tarefas são ponderadas por grupo|Grupo\s+Peso/i)[0];
   const N = '(\\d+(?:[.,]\\d+)?)';
   const SC = new RegExp(`${N}\\s*\\/\\s*${N}`);
   const itens: Record<'g1' | 'g2', Item[]> = { g1: [], g2: [] };
   const add = (grau: string, nome: string, nota: string, max: string) => {
+    if (num(max) === 0) return; // Atividades sem pontos não participam do fechamento do grau.
     nome = nome.split(/\||\d+(?:[.,]\d+)?\s*\//)[0];
     for (let i = 0; i < 3; i++) nome = nome.replace(/[^\p{L}\p{N})]+$/u, '').replace(/\s+[^\s\d]{1,2}$/, ''); // lixo do OCR no fim
     nome = nome.trim() || 'Item';
-    itens[grau.toLowerCase() as 'g1' | 'g2'].push({ id: uid(), nome, tipo: tipoDe(nome), nota: fmt(num(nota)!), max: fmt(num(max)!), data: '' });
+    itens[grau.toLowerCase() as 'g1' | 'g2'].push({ id: uid(), nome, tipo: tipoDe(nome), nota: nota === '-' ? '' : fmt(num(nota)!), max: fmt(num(max)!), data: '' });
   };
   const lines = txt.split(/\r?\n/).map(l => l.trim());
   const titulo = (l: string) => /^(G[12])\s*[-–—]\s*(.*)$/.exec(l);
   const resumo = (l: string) => /\d\s*%|N\/A/.test(l);
+  // Página atual do Canvas: nome da tarefa, grupo em outra linha e pontuação.
+  for (let i = 1; i < lines.length; i++) {
+    if (!/^G[12]$/.test(lines[i])) continue;
+    let anterior = i - 1;
+    while (anterior >= 0 && !lines[anterior]) anterior--;
+    if (anterior < 0 || resumo(lines[anterior])) continue;
+    for (let j = i + 1; j < lines.length && j < i + 14; j++) {
+      if (/^G[12]$/.test(lines[j]) || titulo(lines[j]) || resumo(lines[j])) break;
+      const sc = /(-|\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)/.exec(lines[j]);
+      if (sc) { add(lines[i], titulo(lines[anterior])?.[2] ?? lines[anterior], sc[1], sc[2]); break; }
+    }
+  }
+  const detalhados = { g1: !!itens.g1.length, g2: !!itens.g2.length };
   for (let i = 0; i < lines.length; i++) {
     const m = titulo(lines[i]); if (!m) continue;
+    if (detalhados[m[1].toLowerCase() as 'g1' | 'g2']) continue;
     let sc = SC.exec(m[2]);
     for (let j = i + 1; !sc && j < lines.length && j < i + 6 && !titulo(lines[j]) && !resumo(lines[j]); j++) sc = SC.exec(lines[j]);
     if (sc) add(m[1], m[2], sc[1], sc[2]);
@@ -131,29 +147,32 @@ export function parseCanvas(txt: string): Importado {
     for (const m of s.matchAll(new RegExp(`(G[12]) ?[-–] ?([^/]{1,90}?) \\1 [^/]{0,40}?${N} ?\\/ ?${N}`, 'g'))) add(m[1], m[2], m[3], m[4]);
   }
   const pct: Partial<Record<'g1' | 'g2' | 'sub', number>> = {};
-  for (const m of txt.matchAll(/(?:^|\s)(G1|G2|Substitui\S*)\s+(\d+(?:[.,]\d+)?)\s*%/g)) pct[m[1].startsWith('S') ? 'sub' : m[1].toLowerCase() as 'g1' | 'g2'] = num(m[2])! / 10;
+  for (const m of notas.matchAll(/(?:^|\s)(G1|G2|Substitui\S*)\s+(\d+(?:[.,]\d+)?)\s*%/g)) pct[m[1].startsWith('S') ? 'sub' : m[1].toLowerCase() as 'g1' | 'g2'] = num(m[2])! / 10;
   // O percentual do Canvas normaliza pelo total cadastrado (ex.: 3,60/8 = 45%).
   // Preserve os pontos, pois esse percentual não equivale a 4,5 pontos no grau.
   const pontos: Partial<Record<'g1' | 'g2', { nota: number; max: number }>> = {};
-  for (const m of txt.matchAll(/(?:^|\s)(G1|G2)\s+\d+(?:[.,]\d+)?\s*%\s*(\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)/g)) {
+  for (const m of notas.matchAll(/(?:^|\s)(G1|G2)\s+\d+(?:[.,]\d+)?\s*%\s*(\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)/g)) {
     pontos[m[1].toLowerCase() as 'g1' | 'g2'] = { nota: num(m[2])!, max: num(m[3])! };
   }
+  const semNota = new Set<string>();
+  for (const m of notas.matchAll(/(?:^|\s)(G1|G2|Substitui\S*)\s+N\/A\b/g)) semNota.add(m[1].startsWith('S') ? 'sub' : m[1].toLowerCase());
   const out: Importado = { avisos: [] };
   for (const k of ['g1', 'g2'] as const) {
     const resumo = pontos[k], p = resumo?.nota ?? pct[k];
-    const lista: Item[] | null = itens[k].length ? itens[k] : p != null ? [{ id: uid(), nome: 'Nota do ' + k.toUpperCase(), tipo: 'prova', nota: fmt(p), max: fmt(resumo?.max ?? 10), data: '' }] : null;
+    const lista: Item[] | null = itens[k].length ? itens[k] : p != null || semNota.has(k) ? [{ id: uid(), nome: 'Nota do ' + k.toUpperCase(), tipo: 'prova', nota: p == null ? '' : fmt(p), max: fmt(resumo?.max ?? 10), data: '' }] : null;
     if (!lista) continue;
     const total = lista.filter(i => i.tipo !== 'extra').reduce((s, i) => s + (num(i.max) || 0), 0);
     if (total < 10 - EPS) {
       lista.push({ id: uid(), nome: 'Pontos a conferir', tipo: 'prova', nota: '', max: fmt(10 - total), data: '' });
       out.avisos.push(`${k.toUpperCase()}: foram identificados ${fmt(total)} de 10 pontos. Confira os ${fmt(10 - total)} pontos restantes; eles ficaram pendentes.`);
     }
-    if (!resumo && !itens[k].length) out.avisos.push(`${k.toUpperCase()}: só foi encontrado o percentual. Confira a nota e o valor total no Canvas.`);
+    if (!resumo && !itens[k].length && pct[k] !== undefined) out.avisos.push(`${k.toUpperCase()}: só foi encontrado o percentual. Confira a nota e o valor total no Canvas.`);
     out[k] = { modo: 'lista', trabMax: '4', trab: '', prova: '', extra: '', itens: lista };
     const soma = lista.reduce((s, i) => s + (num(i.nota) || 0), 0);
     if (p != null && Math.abs(soma - p) > 0.06) out.avisos.push(`${k.toUpperCase()}: itens somam ${fmt(soma)}, o Canvas diz ${fmt(p)}`);
   }
-  if (pct.sub) out.sub = fmt(pct.sub);
+  if (semNota.has('sub')) out.sub = '';
+  else if (pct.sub !== undefined) out.sub = fmt(pct.sub);
   out.curso = (txt.match(/(\d{4,6} - [A-ZÀ-Ý0-9][A-ZÀ-Ý0-9 ,.()&-]{2,80}?)(?=\s+G[12]\b|\s+[A-Z]?[a-z]|\s*$|\s+https?|\s+\d)/m) || [])[1];
   return out;
 }

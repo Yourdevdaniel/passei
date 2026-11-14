@@ -1,0 +1,76 @@
+Notas para Aluno de teste
+Curso
+25595 - BANCO DE DADOS AVANÇADO
+Ordenar por
+Prazo de entrega
+Nome Entrega Enviado Status Pontuação Detalhes
+Desafios Stored Procedure
+G1
+3 Ago por 23:59 3 Ago em 21:01
+Clique para testar uma pontuação diferente0 / 0
+
+Desafios Views
+G1
+10 Ago por 23:59 10 Ago em 21:13
+Clique para testar uma pontuação diferente0 / 0
+
+Trabalho 01
+G1
+17 Ago por 23:59 17 Ago em 19:50
+Clique para testar uma pontuação diferente1 / 1
+1
+
+Desafios Functions
+G1
+24 Ago por 23:59 24 Ago em 20:25
+Clique para testar uma pontuação diferente0 / 0
+
+Desafios Triggers
+G1
+24 Ago por 23:59 24 Ago em 13:36
+Clique para testar uma pontuação diferente0 / 0
+
+Atividade Avaliativa 01
+G1
+31 Ago por 22:00
+em falta
+Clique para testar uma pontuação diferente- / 1,5
+
+Web Atividade 01
+G1
+26 Set por 23:59
+em falta
+Clique para testar uma pontuação diferente- / 0
+
+G1
+G1
+28 Set por 22:00 28 Set em 20:32
+Clique para testar uma pontuação diferente4,6 / 6
+1
+
+Tarefas
+N/A
+0,00 / 0,00
+Exercício
+N/A
+0,00 / 0,00
+G1
+65,88%
+5,60 / 8,50
+G2
+N/A
+0,00 / 0,00
+Substituição
+N/A
+0,00 / 0,00
+Total
+65,88%
+Total: 65,88%
+As tarefas são ponderadas por grupo:
+Grupo Peso
+Tarefas 0%
+Exercício 0%
+G1 33%
+G2 67%
+Substituição 0%
+Total 100%

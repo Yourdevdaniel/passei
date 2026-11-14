@@ -33,6 +33,10 @@ export function Resultado({ r, d, set }: { r: Aval; d: Disc; set: SetDisc }) {
   let ring: { v: number | null; max: number; tone: string; bottom: string } = { v: null, max: 10, tone: '', bottom: '' };
   let chip = ['', 'Comece aqui'], h: ReactNode = 'Coloque suas notas', sub: ReactNode = 'Deixe vazio o que ainda não saiu. A gente calcula quanto falta.';
   let form = 'MP = (G1 + G2 × 2) ÷ 3', img = 'vazio', ef = false;
+  if (r.status === 'vazio' && r.g1.known + r.g1.e + r.g2.known + r.g2.e > 0) {
+    chip = ['', 'Em andamento']; h = 'Notas em andamento';
+    sub = 'G1 e G2 ainda têm notas pendentes. A média será calculada quando os graus estiverem completos.';
+  }
   if (r.status === 'falta') {
     const p = r.precisa!, falta = r.falta!, gr = falta === 'G1' ? r.g1 : r.g2;
     const onde = (p.pend.length > 2 ? 'notas que faltam' : p.pend.map(x => x.nome.toLowerCase()).join(' + ')) + ' do ' + falta;

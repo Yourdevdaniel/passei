@@ -8,7 +8,7 @@ interface Nav { abrir: (i: number) => void; nova: () => void }
 // ---------- painel (tela inicial) ----------
 export function PainelView({ db, abrir, nova, importar, exportar, testar }: Nav & { db: Db; importar: () => void; exportar: () => void; testar: () => void }) {
   const rs = doSemestre(db);
-  const comNota = rs.filter(x => x.r.status !== 'vazio');
+  const comNota = rs.filter(x => x.r.status !== 'vazio' || x.r.g1.known + x.r.g1.e + x.r.g2.known + x.r.g2.e > 0);
   const medias = rs.filter(x => x.r.mp != null).map(x => x.r.mf ?? x.r.mp!);
   const hoje = new Date().toISOString().slice(0, 10);
   const agenda = rs.flatMap(x => (['g1', 'g2'] as const).flatMap(k => x.d[k].modo !== 'lista' ? [] :

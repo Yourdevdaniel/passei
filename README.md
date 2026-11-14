@@ -25,6 +25,7 @@ Cada grau vale 10 pontos, divididos entre trabalhos e prova do jeito que o profe
 - **Importar notas**: selecione, cole ou arraste vários PDFs, imagens ou arquivos de texto, inclusive de matérias diferentes. Cada arquivo é identificado e lido no navegador; uma falha não interrompe os demais.
 - **Páginas juntas**: cole AULA, Notas e Avaliações Parciais do WebAluno no mesmo campo, inclusive os dois cortes. Use a identificação automática ou a opção "As três páginas juntas"; cada fonte continua separada.
 - **AULA / Canvas**: avaliações e simulações por disciplina.
+- Na importação do Canvas, pesos dos grupos (33% e 67%) não são notas. `N/A` deixa o grau pendente, substituindo uma nota anterior desse grau; graus ausentes de um recorte são preservados. Atividades sem pontuação não entram no fechamento. Após corrigir uma importação antiga, cole novamente a página para atualizar os dados salvos.
 - **WebAluno**: boletim de Notas separado no painel, com médias, exame, situação e frequência; Avaliações Parciais separadas por matéria e por 1º/2º corte. Pode colar os dois cortes juntos ou importar um depois do outro, preservando o anterior. As notas do WebAluno não substituem as avaliações do AULA nem alimentam sua simulação. O boletim não informa o semestre de cada matéria e não é atribuído ao semestre atual.
 - **Créditos**: você informa os créditos de cada disciplina e o valor do crédito, e vê uma estimativa do custo do semestre. Nenhum valor vem preenchido.
 - **Ponto extra, substituição e exame final.**
