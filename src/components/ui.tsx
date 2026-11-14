@@ -106,7 +106,7 @@ export const Ic = {
 };
 
 // Gaveta lateral ou janela central, com véu, Esc e rolagem travada atrás
-export function Painel({ open, onClose, children, className, label }: { open: boolean; onClose: () => void; children: ReactNode; className: 'drawer' | 'modal'; label?: string }) {
+export function Painel({ open, onClose, children, className, label, role = 'dialog', descricaoId }: { open: boolean; onClose: () => void; children: ReactNode; className: 'drawer' | 'modal'; label?: string; role?: 'dialog' | 'alertdialog'; descricaoId?: string }) {
   const veu = useRef<HTMLDivElement>(null), box = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     if (!open) return;
@@ -142,7 +142,7 @@ export function Painel({ open, onClose, children, className, label }: { open: bo
   if (!open) return null;
   return <div>
     <div className="veu" ref={veu} onClick={onClose} />
-    <div className={className + (className === 'modal' ? ' card' : '')} ref={box} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} data-lenis-prevent>{children}</div>
+    <div className={className + (className === 'modal' ? ' card' : '')} ref={box} role={role} aria-modal="true" aria-label={label} aria-describedby={descricaoId} tabIndex={-1} data-lenis-prevent>{children}</div>
   </div>;
 }
 

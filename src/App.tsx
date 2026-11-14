@@ -10,11 +10,12 @@ import { lerArquivo } from './importar';
 import { Ic, RM, Toast, Seg, useAnim } from './components/ui';
 import { Grau, Resultado, Simulador, Trilha } from './components/Disciplina';
 import { CreditosView, PainelView } from './components/Telas';
-import { Ajustes, Importar } from './components/Dialogos';
+import { Ajustes, Confirmar, Importar } from './components/Dialogos';
 import { jaViuTour, marcarTour, Onboarding } from './components/Onboarding';
 
 type Tela = 'painel' | 'creditos' | 'disc';
 type Aba = 'notas' | 'sim';
+type Confirmacao = { tipo: 'apagar'; id: string; nome: string } | { tipo: 'restaurar'; dados: Db; origem: 'ajustes' | 'importar' };
 
 export default function App() {
   const [db, setDb] = useState<Db>(carregar);
@@ -22,6 +23,7 @@ export default function App() {
   const [aba, setAba] = useState<Aba>('notas');
   const [ajustes, setAjustes] = useState(false);
   const [imp, setImp] = useState(false);
+  const [confirmacao, setConfirmacao] = useState<Confirmacao | null>(null);
   const [avisosImportacao, setAvisosImportacao] = useState<string[]>([]);
   const [prog, setProg] = useState<{ p: number; msg: string } | null>(null);
   const [toast, setToast] = useState<{ msg: string; err?: boolean } | null>(null);
@@ -52,7 +54,7 @@ export default function App() {
     setAvisosImportacao(avisos);
   };
   const importarTexto = (txt: string, fonte?: Fonte | 'passei') => {
-    if (ocupada.current) return;
+    if (ocupada.current || confirmacao) return;
     if (fonte === 'passei' || (!fonte && /^\s*\{/.test(txt))) { void restaurar(txt); return; }
     try {
       const p = parseImportacao(txt, fonte);
@@ -61,7 +63,7 @@ export default function App() {
     } catch (e) { avisar(e instanceof Error ? e.message : 'Não consegui importar o texto.', true); }
   };
   const importarArquivo = async (files: File[]) => {
-    if (ocupada.current || !files.length) return;
+    if (ocupada.current || confirmacao || !files.length) return;
     ocupada.current = true; setImp(true);
     const lote: Importacao[] = [], avisos: string[] = [];
     try {
@@ -133,9 +135,7 @@ export default function App() {
     avisar('Disciplina de teste com dados fictícios. Você pode editar ou apagar.');
   };
   const apagar = () => {
-    if (!confirm(`Apagar "${d.nome}"? As notas dela somem deste navegador.`)) return;
-    setDb(p => { const lista = p.lista.filter((_, i) => i !== p.cur); return { ...p, lista: lista.length ? lista : [novaDisc('Minha disciplina', p.semestre)], cur: 0 }; });
-    setAjustes(false); ir('painel');
+    setAjustes(false); setConfirmacao({ tipo: 'apagar', id: d.id, nome: d.nome });
   };
   const exportar = () => {
     const a = document.createElement('a');
@@ -146,8 +146,22 @@ export default function App() {
     let novo: Db;
     try { novo = lerBackup(typeof conteudo === 'string' ? conteudo : await conteudo.text()); }
     catch (e) { avisar(e instanceof Error ? e.message : 'Não consegui ler o backup.', true); return; }
-    if (!confirm(`Restaurar este backup substituirá todos os dados atuais deste navegador: ${db.lista.length} disciplinas, notas, semestres, créditos e WebAluno. Serão carregadas ${novo.lista.length} disciplinas do backup. Deseja continuar?`)) return;
-    setDb(novo); setAjustes(false); setImp(false); setAvisosImportacao([]); ir('painel'); avisar('Dados do Passei restaurados.');
+    setConfirmacao({ tipo: 'restaurar', dados: novo, origem: ajustes ? 'ajustes' : 'importar' });
+    setAjustes(false); setImp(false);
+  };
+  const cancelarConfirmacao = () => {
+    if (confirmacao?.tipo === 'apagar' || confirmacao?.origem === 'ajustes') setAjustes(true);
+    else if (confirmacao) setImp(true);
+    setConfirmacao(null);
+  };
+  const confirmarAcao = () => {
+    if (!confirmacao) return;
+    if (confirmacao.tipo === 'apagar') {
+      const id = confirmacao.id;
+      setDb(p => { const lista = p.lista.filter(x => x.id !== id); return { ...p, lista: lista.length ? lista : [novaDisc('Minha disciplina', p.semestre)], cur: 0 }; });
+      avisar('Disciplina apagada.');
+    } else { setDb(confirmacao.dados); avisar('Dados do Passei restaurados.'); }
+    setConfirmacao(null); setAvisosImportacao([]); setAba('notas'); ir('painel');
   };
 
   return <div className="shell">
@@ -225,6 +239,12 @@ export default function App() {
     <Ajustes open={ajustes} onClose={() => setAjustes(false)} d={d} set={set} apagar={apagar} exportar={exportar} restaurar={restaurar} />
     <Importar open={imp} onClose={() => { if (!ocupada.current) setImp(false); }} onArquivo={importarArquivo} onTexto={importarTexto} exportar={exportar} prog={prog} />
     <Onboarding open={tour} onClose={fecharTour} importar={() => { fecharTour(); setImp(true); }} testar={() => { fecharTour(); testar(); }} />
+    <Confirmar open={!!confirmacao} onClose={cancelarConfirmacao} onConfirmar={confirmarAcao}
+      titulo={confirmacao?.tipo === 'apagar' ? 'Apagar disciplina?' : 'Restaurar backup?'}
+      rotulo={confirmacao?.tipo === 'apagar' ? 'Apagar disciplina' : 'Restaurar backup'}
+      texto={confirmacao?.tipo === 'apagar'
+        ? `Apagar “${confirmacao.nome}” removerá as notas desta disciplina deste navegador. Esta ação não pode ser desfeita sem um backup.`
+        : `A restauração substituirá todos os dados atuais deste navegador: ${db.lista.length} disciplinas, notas, semestres, créditos e WebAluno. O backup contém ${confirmacao?.tipo === 'restaurar' ? confirmacao.dados.lista.length : 0} disciplinas.`} />
     {arrastando && <div className="dragzone">Solte para importar</div>}
     <Toast t={toast} />
   </div>;

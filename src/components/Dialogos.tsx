@@ -1,9 +1,22 @@
 // Gaveta de ajustes e janela de importação
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useId, useLayoutEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import type { Disc } from '../logic';
 import type { Fonte } from '../importacao';
 import { Ic, Img, Inp, Painel, T } from './ui';
+
+export function Confirmar({ open, titulo, texto, rotulo, onClose, onConfirmar }: {
+  open: boolean; titulo: string; texto: string; rotulo: string; onClose: () => void; onConfirmar: () => void;
+}) {
+  const descricao = useId();
+  return <Painel open={open} onClose={onClose} className="modal" label={titulo} role="alertdialog" descricaoId={descricao}>
+    <div className="confirm-dialog">
+      <span className="confirm-icon" aria-hidden="true">!</span>
+      <h3>{titulo}</h3><p id={descricao}>{texto}</p>
+      <div className="confirm-actions"><button className="btn line" onClick={onClose}>Cancelar</button><button className="btn destructive" onClick={onConfirmar}>{rotulo}</button></div>
+    </div>
+  </Painel>;
+}
 
 export function Ajustes({ open, onClose, d, set, apagar, exportar, restaurar }: {
   open: boolean; onClose: () => void; d: Disc; set: (fn: (d: Disc) => Disc) => void;

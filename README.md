@@ -31,6 +31,7 @@ Cada grau vale 10 pontos, divididos entre trabalhos e prova do jeito que o profe
 - **Créditos**: você informa os créditos de cada disciplina e o valor do crédito, e vê uma estimativa do custo do semestre. Nenhum valor vem preenchido.
 - **Ponto extra, substituição e exame final.**
 - **Backup do Passei**: use "Exportar dados" no painel ou na janela de importação para baixar `passei-backup.json`, com todas as disciplinas, notas, semestres, créditos, boletim e cortes do WebAluno. Para recuperar, use "Importar backup do Passei", arraste o JSON ou cole seu conteúdo no campo de texto. A restauração valida o arquivo e pede confirmação antes de substituir os dados atuais. Importe um backup por vez, separado dos PDFs.
+- Exclusão de disciplina e restauração de backup usam modais do Passei, com foco inicial em "Cancelar", navegação por teclado e Escape. Cancelar volta à janela anterior sem alterar os dados; o app não usa `alert`, `confirm` ou `prompt` nativos.
 
 As notas ficam salvas só no navegador (`localStorage`). Nada é enviado para servidor.
 
