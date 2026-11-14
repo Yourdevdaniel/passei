@@ -8,8 +8,11 @@ export interface Disc {
   id: string; nome: string; semestre: string; g1: Grau; g2: Grau;
   ef: string; sub: string; minimo: string; limitar: boolean;
   creditos: string; valorCredito: string;
+  webAluno?: Partial<Record<'g1' | 'g2', ParcialWeb[]>>;
 }
-export interface Db { cur: number; lista: Disc[]; semestre: string; valorCredito: string }
+export interface ParcialWeb { nome: string; peso: string; nota: string }
+export interface NotaWeb { nome: string; g1: string; g2: string; media: string; exame: string; final: string; situacao: string; frequencia: string }
+export interface Db { cur: number; lista: Disc[]; semestre: string; valorCredito: string; boletim?: NotaWeb[] }
 
 export interface Pend { nome: string; max: number; tipo: Tipo }
 export interface GrauCalc { v: number | null; known: number; e: number; pend: Pend[]; trabMax: number; provaMax: number; trabTem: number }
@@ -151,6 +154,6 @@ export function parseCanvas(txt: string): Importado {
     if (p != null && Math.abs(soma - p) > 0.06) out.avisos.push(`${k.toUpperCase()}: itens somam ${fmt(soma)}, o Canvas diz ${fmt(p)}`);
   }
   if (pct.sub) out.sub = fmt(pct.sub);
-  out.curso = (txt.match(/(\d{4,6} - [A-ZÀ-Ý0-9][A-ZÀ-Ý0-9 ,.()&-]{2,80}?)(?=\s+[A-Z]?[a-z]|\s*$|\s+https?|\s+\d)/m) || [])[1];
+  out.curso = (txt.match(/(\d{4,6} - [A-ZÀ-Ý0-9][A-ZÀ-Ý0-9 ,.()&-]{2,80}?)(?=\s+G[12]\b|\s+[A-Z]?[a-z]|\s*$|\s+https?|\s+\d)/m) || [])[1];
   return out;
 }

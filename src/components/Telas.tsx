@@ -6,7 +6,7 @@ import { Ic, Img, Inp, Ring } from './ui';
 interface Nav { abrir: (i: number) => void; nova: () => void }
 
 // ---------- painel (tela inicial) ----------
-export function PainelView({ db, abrir, nova, importar }: Nav & { db: Db; importar: () => void }) {
+export function PainelView({ db, abrir, nova, importar, exportar }: Nav & { db: Db; importar: () => void; exportar: () => void }) {
   const rs = doSemestre(db);
   const comNota = rs.filter(x => x.r.status !== 'vazio');
   const medias = rs.filter(x => x.r.mp != null).map(x => x.r.mf ?? x.r.mp!);
@@ -22,7 +22,8 @@ export function PainelView({ db, abrir, nova, importar }: Nav & { db: Db; import
         <span className="selo">Segue o modelo de notas da ULBRA: (G1 + G2 × 2) ÷ 3, mínimo 6</span>
         <p>Suas notas de G1 e G2 em um lugar. Veja quanto falta para passar em cada disciplina.</p>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button className="btn peach" onClick={importar}>{Ic.up} Importar do Canvas</button>
+          <button className="btn peach" onClick={importar}>{Ic.up} Importar notas</button>
+          <button className="btn glass" onClick={exportar}>Exportar dados</button>
           <button className="btn glass" onClick={nova}>{Ic.plus} Nova disciplina</button>
         </div>
       </div>
@@ -32,7 +33,7 @@ export function PainelView({ db, abrir, nova, importar }: Nav & { db: Db; import
     {!comNota.length ? <div>
       <div className="sec-h"><h2>Como funciona</h2></div>
       <div className="passos">
-        <div className="card passo anim-in"><Img name="passo1" /><i>1</i><h3>Traga suas notas</h3><p>Importe o PDF de notas do Canvas ou digite na disciplina.</p></div>
+        <div className="card passo anim-in"><Img name="passo1" /><i>1</i><h3>Traga suas notas</h3><p>Importe PDFs ou cole as notas do AULA e do WebAluno.</p></div>
         <div className="card passo anim-in"><Img name="passo2" /><i>2</i><h3>Deixe vazio o que não saiu</h3><p>O sistema calcula quanto você precisa nessa nota.</p></div>
         <div className="card passo anim-in"><Img name="passo3" /><i>3</i><h3>Simule</h3><p>Teste notas da G1 e veja o que sobra para a prova da G2.</p></div>
       </div>

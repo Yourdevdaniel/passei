@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import Lenis from 'lenis';
-import { avaliar, calcGrau, fmt, parseCanvas, type Db, type Disc, type Grau as TGrau } from './logic';
-import { carregar, doSemestre, nomeBonito, normalizar, novaDisc, proximoSemestre, salvar, semestres } from './store';
+import { avaliar, fmt, type Db, type Disc, type Grau as TGrau } from './logic';
+import { carregar, doSemestre, lerBackup, novaDisc, proximoSemestre, salvar, semestres } from './store';
+import { aplicarImportacao, parseImportacao, type Fonte, type Importacao } from './importacao';
+import { BoletimWeb, ParciaisWeb } from './components/WebAluno';
 import { lerArquivo } from './importar';
 import { Ic, RM, Toast, Seg, useAnim } from './components/ui';
 import { Grau, Resultado, Simulador, Trilha } from './components/Disciplina';
@@ -39,53 +41,65 @@ export default function App() {
   const abrir = (i: number) => { setAvisosImportacao([]); setDb(p => ({ ...p, cur: i, semestre: p.lista[i].semestre })); setAba('notas'); ir('disc'); };
   const trocarSemestre = (s: string) => { setDb(p => ({ ...p, semestre: s })); if (tela === 'disc') ir('painel'); };
 
-  const importarTexto = (txt: string) => {
-    const p = parseCanvas(txt);
-    if (!p.g1 && !p.g2) { avisar('Não achei G1 nem G2 aí. É a página de notas do Canvas?', true); return; }
-    setDb(prev => {
-      const lista = prev.lista.slice(); let cur = prev.cur, alvo = { ...lista[cur] };
-      // só reaproveita uma disciplina em branco; senão cria outra (nunca sobrescreve a errada)
-      const emBranco = (x: Disc) => /^(Minha|Nova) disciplina$/.test(x.nome) && x.semestre === prev.semestre && (['g1', 'g2'] as const).every(k => { const c = calcGrau(x[k], false); return !c.known && !c.e; });
-      const curso = p.curso ? nomeBonito(p.curso) : null;
-      const i = curso ? lista.findIndex(x => x.nome === curso && x.semestre === prev.semestre) : -1;
-      if (i >= 0) { cur = i; alvo = { ...lista[i] }; }
-      else if (curso && tela === 'disc' && emBranco(alvo)) alvo.nome = curso;
-      else if (curso || tela !== 'disc') {
-        const livre = lista.findIndex(emBranco);
-        if (livre >= 0) { cur = livre; alvo = { ...lista[livre], nome: curso || lista[livre].nome }; }
-        else { alvo = novaDisc(curso || 'Disciplina importada', prev.semestre); lista.push(alvo); cur = lista.length - 1; }
-      }
-      if (p.g1) alvo.g1 = p.g1;
-      if (p.g2) alvo.g2 = p.g2;
-      if (p.sub) alvo.sub = p.sub;
-      lista[cur] = alvo;
-      return { ...prev, lista, cur };
-    });
-    setAvisosImportacao(p.avisos);
-    setImp(false); setAba('notas'); ir('disc');
-    const n = (p.g1?.itens.length || 0) + (p.g2?.itens.length || 0);
-    avisar(p.avisos.length ? 'Importado, mas confira: ' + p.avisos.join('; ') : `Pronto! ${n} itens importados. Revise cada informação.`, !!p.avisos.length);
+  const ocupada = useRef(false);
+  const concluirImportacao = (lote: Importacao[], avisos: string[]) => {
+    if (lote.length) {
+      setDb(prev => lote.reduce(aplicarImportacao, prev));
+      setImp(false); setAba('notas');
+      ir(['web-notas', 'misto'].includes(lote.at(-1)!.fonte) ? 'painel' : 'disc');
+    }
+    setAvisosImportacao(avisos);
   };
-  const importarArquivo = async (file: File) => {
-    setImp(true);
-    try { const t = await lerArquivo(file, (p, msg) => setProg({ p, msg })); setProg(null); importarTexto(t); }
-    catch (e) { setProg(null); avisar('Não consegui ler: ' + (e instanceof Error ? e.message : 'arquivo inválido'), true); }
+  const importarTexto = (txt: string, fonte?: Fonte | 'passei') => {
+    if (ocupada.current) return;
+    if (fonte === 'passei' || (!fonte && /^\s*\{/.test(txt))) { void restaurar(txt); return; }
+    try {
+      const p = parseImportacao(txt, fonte);
+      concluirImportacao([p], p.avisos);
+      avisar('Notas importadas. Confira no portal da faculdade.');
+    } catch (e) { avisar(e instanceof Error ? e.message : 'Não consegui importar o texto.', true); }
+  };
+  const importarArquivo = async (files: File[]) => {
+    if (ocupada.current || !files.length) return;
+    ocupada.current = true; setImp(true);
+    const lote: Importacao[] = [], avisos: string[] = [];
+    try {
+      if (files.some(f => /\.json$/i.test(f.name) || f.type === 'application/json')) {
+        if (files.length !== 1) { avisar('Importe o backup do Passei sozinho, separado dos PDFs e de outros backups.', true); return; }
+        await restaurar(files[0]); return;
+      }
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        setProg({ p: i / files.length, msg: `${i + 1}/${files.length} · ${file.name}` });
+        try {
+          const txt = await lerArquivo(file, (p, msg) => setProg({ p: (i + p) / files.length, msg: `${i + 1}/${files.length} · ${file.name} · ${msg}` }));
+          if (/^\s*\{/.test(txt)) {
+            if (files.length !== 1) throw new Error('Importe o backup do Passei sozinho.');
+            await restaurar(txt); return;
+          }
+          const p = parseImportacao(txt); lote.push(p);
+          avisos.push(...p.avisos.map(a => `${file.name}: ${a}`));
+        } catch (e) { avisos.push(`${file.name}: ${e instanceof Error ? e.message : 'Não consegui ler o arquivo.'}`); }
+      }
+      concluirImportacao(lote, avisos);
+      avisar(`${lote.length} de ${files.length} arquivos importados.${lote.length < files.length ? ' Confira os detalhes da importação.' : ''}`, lote.length < files.length);
+    } finally { setProg(null); ocupada.current = false; }
   };
   const acoes = useRef({ importarTexto, importarArquivo });
   acoes.current = { importarTexto, importarArquivo };
 
   useEffect(() => { // colar e arrastar em qualquer lugar
     const paste = (e: ClipboardEvent) => {
-      const f = e.clipboardData?.files[0];
-      if (f) { e.preventDefault(); acoes.current.importarArquivo(f); return; }
+      const files = Array.from(e.clipboardData?.files ?? []);
+      if (files.length) { e.preventDefault(); acoes.current.importarArquivo(files); return; }
       const t = e.clipboardData?.getData('text') ?? '';
-      if (t.length > 40 && /G[12]/.test(t) && (e.target as HTMLElement).tagName !== 'TEXTAREA') { e.preventDefault(); acoes.current.importarTexto(t); }
+      if (t.length > 40 && /G[12]|WebAluno|"lista"\s*:/.test(t) && !['TEXTAREA', 'INPUT'].includes((e.target as HTMLElement).tagName)) { e.preventDefault(); acoes.current.importarTexto(t); }
     };
     let n = 0;
     const enter = (e: DragEvent) => { if (e.dataTransfer?.types.includes('Files')) { n++; setArrastando(true); } };
     const leave = () => { if (--n <= 0) { n = 0; setArrastando(false); } };
     const over = (e: DragEvent) => e.preventDefault();
-    const drop = (e: DragEvent) => { e.preventDefault(); n = 0; setArrastando(false); const f = e.dataTransfer?.files[0]; if (f) acoes.current.importarArquivo(f); };
+    const drop = (e: DragEvent) => { e.preventDefault(); n = 0; setArrastando(false); const files = Array.from(e.dataTransfer?.files ?? []); if (files.length) acoes.current.importarArquivo(files); };
     addEventListener('paste', paste); addEventListener('dragenter', enter); addEventListener('dragleave', leave); addEventListener('dragover', over); addEventListener('drop', drop);
     return () => { removeEventListener('paste', paste); removeEventListener('dragenter', enter); removeEventListener('dragleave', leave); removeEventListener('dragover', over); removeEventListener('drop', drop); };
   }, []);
@@ -122,12 +136,12 @@ export default function App() {
     a.href = URL.createObjectURL(new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' }));
     a.download = 'passei-backup.json'; a.click(); URL.revokeObjectURL(a.href);
   };
-  const restaurar = async (file: File) => {
-    let novo: Db | null = null;
-    try { novo = normalizar(JSON.parse(await file.text())); } catch { /* não é JSON */ }
-    if (!novo) { avisar('Esse arquivo não é um backup do Passei.', true); return; }
-    if (!confirm(`Trocar as ${db.lista.length} disciplinas de agora pelas ${novo.lista.length} do backup?`)) return;
-    setDb(novo); setAjustes(false); ir('painel'); avisar('Backup restaurado.');
+  const restaurar = async (conteudo: File | string) => {
+    let novo: Db;
+    try { novo = lerBackup(typeof conteudo === 'string' ? conteudo : await conteudo.text()); }
+    catch (e) { avisar(e instanceof Error ? e.message : 'Não consegui ler o backup.', true); return; }
+    if (!confirm(`Restaurar este backup substituirá todos os dados atuais deste navegador: ${db.lista.length} disciplinas, notas, semestres, créditos e WebAluno. Serão carregadas ${novo.lista.length} disciplinas do backup. Deseja continuar?`)) return;
+    setDb(novo); setAjustes(false); setImp(false); setAvisosImportacao([]); ir('painel'); avisar('Dados do Passei restaurados.');
   };
 
   return <div className="shell">
@@ -163,11 +177,9 @@ export default function App() {
     </aside>
 
     <main className="content"><div className="wrap" ref={corpo}>
-      <aside className="dev-notice" aria-label="Aviso sobre o sistema">
-        <strong>Sistema em desenvolvimento</strong>
-        <p>Revise cada informação, incluindo notas importadas, valores das avaliações e resultados. O sistema é suscetível a erros. Confirme os dados no Canvas e com seu professor.</p>
-      </aside>
-      {tela === 'painel' ? <PainelView db={db} abrir={abrir} nova={nova} importar={() => setImp(true)} />
+      <p className="system-hint">Pode haver erros. Confira sempre as informações no portal da faculdade.</p>
+      {avisosImportacao.length > 0 && <details className="import-details"><summary>Detalhes da importação ({avisosImportacao.length})</summary><ul>{avisosImportacao.map((a, i) => <li key={i}>{a}</li>)}</ul></details>}
+      {tela === 'painel' ? <><PainelView db={db} abrir={abrir} nova={nova} importar={() => setImp(true)} exportar={exportar} /><BoletimWeb notas={db.boletim} /></>
         : tela === 'creditos' ? <CreditosView db={db} setDb={setDb} abrir={abrir} nova={nova} />
         : <div>
           <div className="ph anim-in">
@@ -181,7 +193,8 @@ export default function App() {
               <button className="btn line" onClick={() => setAjustes(true)}>{Ic.gear} Ajustes</button>
             </div>
           </div>
-          {avisosImportacao.length > 0 && <aside className="dev-notice" role="status"><strong>Revise a importação</strong><ul>{avisosImportacao.map((a, i) => <li key={i}>{a}</li>)}</ul></aside>}
+          <ParciaisWeb notas={d.webAluno} />
+          {d.webAluno && <div className="sec-h"><h2>AULA · Notas e simulação</h2><span>Avaliações separadas do WebAluno</span></div>}
           <Trilha r={r} d={d} />
           <Resultado r={r} d={d} set={set} />
           <div className="tabs"><Seg label="Seção" value={aba} onChange={setAba} options={[['notas', 'Minhas notas'], ['sim', 'Simulador']]} /></div>
@@ -204,7 +217,7 @@ export default function App() {
     </div></main>
 
     <Ajustes open={ajustes} onClose={() => setAjustes(false)} d={d} set={set} apagar={apagar} exportar={exportar} restaurar={restaurar} />
-    <Importar open={imp} onClose={() => { if (!prog) setImp(false); }} onArquivo={importarArquivo} onTexto={importarTexto} prog={prog} />
+    <Importar open={imp} onClose={() => { if (!ocupada.current) setImp(false); }} onArquivo={importarArquivo} onTexto={importarTexto} exportar={exportar} prog={prog} />
     <Onboarding open={tour} onClose={fecharTour} importar={() => { fecharTour(); setImp(true); }} />
     {arrastando && <div className="dragzone">Solte para importar</div>}
     <Toast t={toast} />

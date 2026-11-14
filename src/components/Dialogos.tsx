@@ -2,7 +2,8 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import type { Disc } from '../logic';
-import { Ic, Img, Inp, Painel } from './ui';
+import type { Fonte } from '../importacao';
+import { Ic, Img, Inp, Painel, T } from './ui';
 
 export function Ajustes({ open, onClose, d, set, apagar, exportar, restaurar }: {
   open: boolean; onClose: () => void; d: Disc; set: (fn: (d: Disc) => Disc) => void;
@@ -32,28 +33,42 @@ export function Ajustes({ open, onClose, d, set, apagar, exportar, restaurar }: 
   </Painel>;
 }
 
-export function Importar({ open, onClose, onArquivo, onTexto, prog }: {
-  open: boolean; onClose: () => void; onArquivo: (f: File) => void; onTexto: (t: string) => void; prog: { p: number; msg: string } | null;
+export function Importar({ open, onClose, onArquivo, onTexto, exportar, prog }: {
+  open: boolean; onClose: () => void; onArquivo: (f: File[]) => void; onTexto: (t: string, fonte?: Fonte | 'passei') => void; exportar: () => void; prog: { p: number; msg: string } | null;
 }) {
   const inp = useRef<HTMLInputElement>(null), bar = useRef<HTMLElement>(null), [on, setOn] = useState(false), [txt, setTxt] = useState('');
-  useLayoutEffect(() => { if (bar.current) gsap.to(bar.current, { width: (prog?.p ?? 0) * 100 + '%', duration: .4 }); }, [prog?.p]);
+  const backup = useRef<HTMLInputElement>(null);
+  const [fonte, setFonte] = useState<Fonte | 'passei' | ''>('');
+  useLayoutEffect(() => { if (bar.current) gsap.to(bar.current, { width: (prog?.p ?? 0) * 100 + '%', duration: .4 * T }); }, [prog?.p]);
   return <Painel open={open} onClose={onClose} className="modal">
-    <h3>Importar do Canvas</h3>
-    <p>Imprima as notas como PDF (ou tire um print) e solte aqui.</p>
-    <p className="aviso">Após importar, revise cada nota e o valor de cada avaliação. A leitura automática pode errar ou deixar avaliações de fora.</p>
-    <div className={'drop' + (on ? ' on' : '')} onClick={() => inp.current?.click()}
+    <h3>Importar e exportar</h3>
+    <section className="backup-actions" aria-label="Seus dados no Passei">
+      <h4>Seus dados no Passei</h4>
+      <p>Leve todas as notas, semestres, créditos e dados do WebAluno para outro navegador ou aparelho.</p>
+      <div><button className="btn line" disabled={!!prog} onClick={exportar}>Exportar dados</button>
+        <button className="btn line" disabled={!!prog} onClick={() => backup.current?.click()}>Importar backup do Passei</button></div>
+      <input ref={backup} type="file" hidden disabled={!!prog} accept="application/json,.json" onChange={e => { const f = e.target.files?.[0]; if (f) onArquivo([f]); e.target.value = ''; }} />
+    </section>
+    <div className="or">notas do AULA e WebAluno</div>
+    <p>Traga PDFs de várias matérias, imagens ou textos do AULA e do WebAluno. A fonte é identificada por arquivo.</p>
+    <p className="hint">Pode haver erros na leitura. Confira as notas após importar.</p>
+    <div className={'drop' + (on ? ' on' : '')} role="button" tabIndex={prog ? -1 : 0} aria-disabled={!!prog} aria-label="Escolher arquivos de notas" onClick={() => { if (!prog) inp.current?.click(); }}
+      onKeyDown={e => { if (!prog && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); inp.current?.click(); } }}
       onDragOver={e => { e.preventDefault(); setOn(true); }} onDragLeave={() => setOn(false)}
-      onDrop={e => { e.preventDefault(); e.stopPropagation(); setOn(false); const f = e.dataTransfer.files[0]; if (f) onArquivo(f); }}>
+      onDrop={e => { e.preventDefault(); setOn(false); if (!prog) onArquivo(Array.from(e.dataTransfer.files)); }}>
       <Img name="importar" />
-      <b>{Ic.up} Solte o PDF ou a imagem</b><span>ou clique para escolher</span>
-      <input ref={inp} type="file" hidden accept="application/pdf,image/*,.txt" onChange={e => { const f = e.target.files?.[0]; if (f) onArquivo(f); e.target.value = ''; }} />
+      <b>{Ic.up} Solte arquivos de notas ou um backup</b><span>PDFs, imagens, textos ou backup JSON do Passei</span>
+      <input ref={inp} type="file" hidden multiple disabled={!!prog} accept="application/pdf,image/*,.txt,application/json,.json" onChange={e => { onArquivo(Array.from(e.target.files ?? [])); e.target.value = ''; }} />
     </div>
-    {prog && <div><div className="prog"><i ref={bar} /></div><p className="hint" style={{ color: 'var(--mut)', fontSize: 13, margin: '8px 0 0' }}>{prog.msg}</p></div>}
+    {prog && <div role="status" aria-live="polite"><div className="prog" role="progressbar" aria-label="Importando arquivos" aria-valuenow={Math.round(prog.p * 100)} aria-valuemin={0} aria-valuemax={100}><i ref={bar} /></div><p className="hint" style={{ color: 'var(--mut)', fontSize: 13, margin: '8px 0 0' }}>{prog.msg}</p></div>}
     <div className="or">ou cole o texto da página</div>
-    <textarea placeholder="Ctrl+A na página de notas, Ctrl+C e cole aqui" value={txt} onChange={e => setTxt(e.target.value)} />
+    <label className="import-source">Página de origem<select value={fonte} disabled={!!prog} onChange={e => setFonte(e.target.value as Fonte | 'passei' | '')}>
+      <option value="">Identificar automaticamente</option><option value="passei">Passei · Backup dos seus dados (JSON)</option><option value="misto">As três páginas juntas · AULA + WebAluno</option><option value="aula">AULA / Canvas · Notas</option><option value="web-notas">WebAluno · Notas</option><option value="web-parciais">WebAluno · Avaliações parciais (1º e 2º corte)</option>
+    </select></label>
+    <textarea aria-label="Texto da página de notas" disabled={!!prog} placeholder="Cole páginas do AULA e WebAluno ou o conteúdo de um backup JSON do Passei." value={txt} onChange={e => setTxt(e.target.value)} />
     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
-      <button className="btn" onClick={onClose}>Cancelar</button>
-      <button className="btn peach" disabled={!txt.trim()} onClick={() => onTexto(txt)}>Importar texto</button>
+      <button className="btn" disabled={!!prog} onClick={onClose}>Cancelar</button>
+      <button className="btn peach" disabled={!!prog || !txt.trim()} onClick={() => onTexto(txt, fonte || undefined)}>Importar texto</button>
     </div>
   </Painel>;
 }

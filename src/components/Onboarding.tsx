@@ -9,7 +9,7 @@ export const marcarTour = () => { try { localStorage.setItem(KEY, '1'); } catch 
 
 const PASSOS = [
   { img: 'hero', t: 'Bem-vindo ao Passei', p: 'Aqui você descobre quanto precisa tirar para passar. A conta segue o modelo de notas da ULBRA: (G1 + G2 × 2) ÷ 3, com mínimo 6.' },
-  { img: 'passo1', t: 'Traga suas notas', p: 'Importe o PDF de notas do Canvas ou crie a disciplina e digite. Cada grau tem trabalhos e prova, do jeito que o professor dividiu.' },
+  { img: 'passo1', t: 'Traga suas notas', p: 'Importe vários PDFs ou cole as notas do AULA e do WebAluno. O boletim e os dois cortes ficam separados das avaliações do AULA.' },
   { img: 'passo2', t: 'Deixe vazio o que não saiu', p: 'Campo vazio é nota que ainda não existe. O Passei calcula quanto você precisa nela para fechar a média.' },
   { img: 'passo3', t: 'Simule antes da prova', p: 'No simulador, escolha uma nota para a G1 e veja o que sobra para a prova da G2. Se cair no exame, ele mostra quanto precisa lá.' },
   { img: 'creditos', t: 'Semestres e créditos', p: 'Separe as disciplinas por semestre no menu. Em Créditos, informe os créditos e o valor para ter uma estimativa do custo.' },
@@ -50,7 +50,7 @@ export function Onboarding({ open, onClose, importar }: { open: boolean; onClose
         {i > 0 ? <button className="btn line" onClick={() => setI(i - 1)}>Voltar</button> : <button className="btn" onClick={onClose}>Pular</button>}
         {ultimo ? <>
           <button className="btn line" onClick={onClose}>Digitar minhas notas</button>
-          <button className="btn peach" onClick={importar}>{Ic.up} Importar do Canvas</button>
+          <button className="btn peach" onClick={importar}>{Ic.up} Importar notas</button>
         </> : <button className="btn peach" onClick={() => setI(i + 1)}>Próximo</button>}
       </div>
     </div>

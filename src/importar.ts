@@ -37,7 +37,7 @@ export async function lerArquivo(file: File, prog: Prog): Promise<string> {
       const itens: { str: string; hasEOL: boolean }[] = (await (await pdf.getPage(p)).getTextContent()).items;
       txt += itens.map(x => x.str + (x.hasEOL ? '\n' : ' ')).join('') + '\n';
     }
-    if (/G[12]\s*[-–]|G[12]\s+[\d,]+\s*%/.test(txt)) return txt;
+    if (/G[12]\s*[-–]|G[12]\s+[\d,]+\s*%|WebAluno|Avaliações Parciais|Situação\s+Freq/i.test(txt)) return txt;
     // PDF "impresso" (Microsoft Print to PDF) não tem texto: vira imagem e passa no OCR
     const imgs: HTMLCanvasElement[] = [];
     for (let p = 1; p <= pdf.numPages; p++) {

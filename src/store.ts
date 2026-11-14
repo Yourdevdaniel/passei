@@ -21,7 +21,31 @@ export function normalizar(v: any): Db | null {
     g1: { ...grauVazio(), ...x.g1, trabMax: String(x.g1.trabMax ?? '4'), itens: x.g1.itens ?? [] },
     g2: { ...grauVazio(), ...x.g2, trabMax: String(x.g2.trabMax ?? '4'), itens: x.g2.itens ?? [] },
   }));
-  return { lista, cur: Math.min(Math.max(0, v.cur | 0), lista.length - 1), semestre: sem, valorCredito: String(v.valorCredito ?? '') };
+  return { lista, cur: Math.min(Math.max(0, v.cur | 0), lista.length - 1), semestre: sem, valorCredito: String(v.valorCredito ?? ''), boletim: Array.isArray(v.boletim) ? v.boletim : undefined };
+}
+
+export function lerBackup(txt: string): Db {
+  const objeto = (v: any) => v !== null && typeof v === 'object' && !Array.isArray(v);
+  const campos = (v: any, nomes: string[]) => objeto(v) && nomes.every(k => v[k] === undefined || typeof v[k] === 'string');
+  const grau = (g: any) => campos(g, ['trab', 'prova', 'extra']) &&
+    (g.modo === undefined || g.modo === 'simples' || g.modo === 'lista') &&
+    (g.trabMax === undefined || typeof g.trabMax === 'string' || typeof g.trabMax === 'number') &&
+    (g.itens === undefined || Array.isArray(g.itens) && g.itens.every((i: any) =>
+      objeto(i) && ['id', 'nome', 'nota', 'max', 'data'].every(k => typeof i[k] === 'string') && ['trab', 'prova', 'extra'].includes(i.tipo)));
+  try {
+    const v = JSON.parse(txt);
+    if (!campos(v, ['semestre', 'valorCredito']) || !Array.isArray(v.lista) || !v.lista.length ||
+      !v.lista.every((d: any) => campos(d, ['id', 'nome', 'semestre', 'ef', 'sub', 'minimo', 'creditos', 'valorCredito']) && grau(d.g1) && grau(d.g2) &&
+        (d.limitar === undefined || typeof d.limitar === 'boolean') &&
+        (d.webAluno === undefined || objeto(d.webAluno) && Object.entries(d.webAluno).every(([k, itens]: [string, any]) =>
+          ['g1', 'g2'].includes(k) && Array.isArray(itens) && itens.every((i: any) => objeto(i) && ['nome', 'peso', 'nota'].every(k => typeof i[k] === 'string'))))) ||
+      (v.boletim !== undefined && (!Array.isArray(v.boletim) || !v.boletim.every((n: any) => objeto(n) && ['nome', 'g1', 'g2', 'media', 'exame', 'final', 'situacao', 'frequencia'].every(k => typeof n[k] === 'string'))))) {
+      throw new Error('Dados inválidos');
+    }
+    const db = normalizar(v);
+    if (db) return db;
+  } catch { /* mantém os dados atuais quando o backup não é válido */ }
+  throw new Error('Esse arquivo não é um backup válido do Passei.');
 }
 
 export function carregar(): Db {
