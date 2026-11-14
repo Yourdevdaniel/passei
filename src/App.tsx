@@ -19,6 +19,7 @@ export default function App() {
   const [aba, setAba] = useState<Aba>('notas');
   const [ajustes, setAjustes] = useState(false);
   const [imp, setImp] = useState(false);
+  const [avisosImportacao, setAvisosImportacao] = useState<string[]>([]);
   const [prog, setProg] = useState<{ p: number; msg: string } | null>(null);
   const [toast, setToast] = useState<{ msg: string; err?: boolean } | null>(null);
   const [arrastando, setArrastando] = useState(false);
@@ -35,7 +36,7 @@ export default function App() {
   const avisar = (msg: string, err?: boolean) => { setToast({ msg, err }); clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(null), 4200); };
   const topo = () => window.__lenis ? window.__lenis.scrollTo(0, { immediate: true }) : scrollTo(0, 0);
   const ir = (t: Tela) => { setTela(t); topo(); };
-  const abrir = (i: number) => { setDb(p => ({ ...p, cur: i, semestre: p.lista[i].semestre })); setAba('notas'); ir('disc'); };
+  const abrir = (i: number) => { setAvisosImportacao([]); setDb(p => ({ ...p, cur: i, semestre: p.lista[i].semestre })); setAba('notas'); ir('disc'); };
   const trocarSemestre = (s: string) => { setDb(p => ({ ...p, semestre: s })); if (tela === 'disc') ir('painel'); };
 
   const importarTexto = (txt: string) => {
@@ -60,9 +61,10 @@ export default function App() {
       lista[cur] = alvo;
       return { ...prev, lista, cur };
     });
+    setAvisosImportacao(p.avisos);
     setImp(false); setAba('notas'); ir('disc');
     const n = (p.g1?.itens.length || 0) + (p.g2?.itens.length || 0);
-    avisar(p.avisos.length ? 'Importado, mas confira: ' + p.avisos.join('; ') : `Pronto! ${n} notas importadas.`, !!p.avisos.length);
+    avisar(p.avisos.length ? 'Importado, mas confira: ' + p.avisos.join('; ') : `Pronto! ${n} itens importados. Revise cada informação.`, !!p.avisos.length);
   };
   const importarArquivo = async (file: File) => {
     setImp(true);
@@ -105,6 +107,7 @@ export default function App() {
   }, [tela, aba, db.cur, db.semestre]);
 
   const nova = () => {
+    setAvisosImportacao([]);
     setDb(p => ({ ...p, lista: [...p.lista, novaDisc('Nova disciplina', p.semestre)], cur: p.lista.length }));
     setAba('notas'); ir('disc');
     setTimeout(() => document.querySelector<HTMLInputElement>('.titulo')?.select(), 60);
@@ -160,6 +163,10 @@ export default function App() {
     </aside>
 
     <main className="content"><div className="wrap" ref={corpo}>
+      <aside className="dev-notice" aria-label="Aviso sobre o sistema">
+        <strong>Sistema em desenvolvimento</strong>
+        <p>Revise cada informação, incluindo notas importadas, valores das avaliações e resultados. O sistema é suscetível a erros. Confirme os dados no Canvas e com seu professor.</p>
+      </aside>
       {tela === 'painel' ? <PainelView db={db} abrir={abrir} nova={nova} importar={() => setImp(true)} />
         : tela === 'creditos' ? <CreditosView db={db} setDb={setDb} abrir={abrir} nova={nova} />
         : <div>
@@ -174,6 +181,7 @@ export default function App() {
               <button className="btn line" onClick={() => setAjustes(true)}>{Ic.gear} Ajustes</button>
             </div>
           </div>
+          {avisosImportacao.length > 0 && <aside className="dev-notice" role="status"><strong>Revise a importação</strong><ul>{avisosImportacao.map((a, i) => <li key={i}>{a}</li>)}</ul></aside>}
           <Trilha r={r} d={d} />
           <Resultado r={r} d={d} set={set} />
           <div className="tabs"><Seg label="Seção" value={aba} onChange={setAba} options={[['notas', 'Minhas notas'], ['sim', 'Simulador']]} /></div>

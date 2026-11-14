@@ -63,3 +63,29 @@ test('ponto extra trava em 10 só quando pedido', () => {
 test('simulador: G1 = 7 e 2 pontos de trabalho na G2 pedem 3,5 na prova', () => {
   expect(simular(7, 2, 0, 6, 6).prova).toBeCloseTo(3.5);
 });
+
+test('zero em prova futura fica pendente, sem antecipar o exame', () => {
+  const a = avaliar({
+    g1: simples('0', '', '9,64'),
+    g2: lista({ tipo: 'prova', nome: 'Prova', nota: '0', max: '6', data: '2099-11-20' }, { tipo: 'trab', nota: '4', max: '4' }),
+    limitar: true,
+  });
+  expect(a.G2).toBeNull();
+  expect(a.status).toBe('falta');
+  expect(a.precisa!.valor).toBeCloseTo(0.18);
+});
+
+test('zero confirmado em avaliação passada continua valendo zero', () => {
+  expect(calcGrau(lista({ tipo: 'prova', nota: '0', max: '10', data: '2000-01-01' })).v).toBe(0);
+});
+
+test.each(['G1 92,4% 9,24 / 10,00\nG2 45% 3,60 / 8,00', 'G1 92,4% 9,24 / 10,00 G2 45% 3,60 / 8,00'])('preserva 3,60/8 do Canvas e deixa os pontos restantes pendentes: %s', txt => {
+  const p = parseCanvas(txt);
+  expect(p.g2!.itens[0].nota).toBe('3,6');
+  expect(p.g2!.itens[0].max).toBe('8');
+  const a = avaliar({ g1: p.g1!, g2: p.g2!, limitar: true });
+  expect(a.status).toBe('falta');
+  expect(a.g2.known).toBeCloseTo(3.6);
+  expect(a.g2.pend[0].max).toBe(2);
+  expect(p.avisos.length).toBeGreaterThan(0);
+});

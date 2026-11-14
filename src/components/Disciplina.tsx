@@ -1,7 +1,7 @@
 // Tela de uma disciplina: trilha, resultado, G1/G2 e simulador
 import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import gsap from 'gsap';
-import { calcGrau, EPS, fmt, num, simular, uid, type Aval, type Disc, type Grau as TGrau, type GrauCalc, type Item as TItem, type Tipo } from '../logic';
+import { calcGrau, EPS, fmt, itemPendente, num, simular, uid, type Aval, type Disc, type Grau as TGrau, type GrauCalc, type Item as TItem, type Tipo } from '../logic';
 import { tom } from '../store';
 import { Ic, Img, Inp, Num, Ring, Seg, T, useAnim } from './ui';
 
@@ -43,8 +43,8 @@ export function Resultado({ r, d, set }: { r: Aval; d: Disc; set: SetDisc }) {
     else {
       const melhor = Math.min(d.limitar ? 10 : Infinity, gr.known + gr.e + p.max);
       const mp = falta === 'G2' ? (r.G1! + 2 * melhor) / 3 : (melhor + 2 * r.G2!) / 3, efp = (3 * min - mp) / 2;
-      chip = ['bad', 'Direto não dá']; h = 'Vai pro exame'; img = 'exame'; ring.tone = 'bad';
-      sub = efp <= 10 ? <>Mesmo com nota cheia, precisa de <b>{fmt(efp)}</b> no exame.</> : 'Nem o exame salva. Só substituição.';
+      chip = ['warn', 'Em andamento']; h = 'Ainda há notas pendentes'; img = 'exame'; ring.tone = 'warn';
+      sub = efp <= 10 ? <>Se fechar as pendências com nota máxima, precisará de <b>{fmt(efp)}</b> no exame.</> : 'Com estas notas, mesmo o melhor cenário exigiria substituição. Confira as pendências.';
     }
   } else if (r.mp != null) {
     const final = r.mf ?? r.mp;
@@ -96,6 +96,7 @@ function Item({ it, onChange, onDel }: { it: TItem; onChange: (p: Partial<TItem>
     {cal ? <input type="date" className="data" aria-label="Data" value={it.data} onChange={e => onChange({ data: e.target.value })} />
       : <button className="ico cal" title="Adicionar data (opcional)" onClick={() => setCal(true)}>{Ic.cal}</button>}
     <button className="ico del" title="Remover" onClick={del}>{Ic.x}</button>
+    {itemPendente(it) && <small className="item-feedback">{num(it.nota) === 0 ? 'Avaliação futura: este zero está sendo tratado como pendente.' : 'Nota pendente. Preencha quando sair; use 0 somente para uma nota confirmada.'}</small>}
   </li>;
 }
 
@@ -129,6 +130,7 @@ export function Grau({ k, g, gr, setG, min, usado }: { k: 'g1' | 'g2'; g: TGrau;
       <div><span className="gc-tag">{K}</span><span className="gc-peso">peso {k === 'g1' ? 1 : 2}</span></div>
       <Ring v={gr.v} size={64} stroke={7} tone={tom(gr.v, min)}><strong style={{ fontSize: 17 }}><Num v={gr.v} /></strong></Ring>
     </div>
+    {gr.pend.length > 0 && <p className="aviso">{gr.pend.length} {gr.pend.length === 1 ? 'avaliação pendente' : 'avaliações pendentes'}. Já somou {fmt(gr.known + gr.e)} pontos. O grau ainda não está fechado.</p>}
     <Seg small label={'Modo do ' + K} value={g.modo} options={[['simples', 'Simples'], ['lista', 'Nota por nota']]} onChange={trocar} />
     {g.modo !== 'lista' ? <div>
       <div className="split">
@@ -188,6 +190,10 @@ export function Simulador({ r }: { r: Aval }) {
   }
   const tiles = Array.from({ length: 11 }, (_, i) => { const x = simular(i, T2, g2.e, pMax, min).prova; return { i, x, c: x <= EPS ? 'ok' : x > pMax + EPS ? 'bad' : x / pMax > .8 ? 'warn' : 'mid' }; });
   return <section className="card sim anim-in">
+    <div className="sim-controls">
+      <button className="btn line" onClick={() => { setG1(null); setT2(null); }}>Restaurar minhas notas</button>
+      <p className="hint">A simulação não altera suas notas salvas.{r.G1 == null ? ' Sem G1 concluída, usamos 6 como ponto de partida.' : ''}</p>
+    </div>
     <div>
       <Slider label="Se eu tirar na G1" value={G1} max={10} real={r.G1} onChange={setG1} onReset={() => setG1(null)} />
       {tMax > 0 && <Slider label="Trabalhos da G2 (já tenho)" value={T2} max={tMax} real={g2.trabTem} onChange={setT2} onReset={() => setT2(null)} />}

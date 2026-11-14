@@ -40,6 +40,7 @@ export function Importar({ open, onClose, onArquivo, onTexto, prog }: {
   return <Painel open={open} onClose={onClose} className="modal">
     <h3>Importar do Canvas</h3>
     <p>Imprima as notas como PDF (ou tire um print) e solte aqui.</p>
+    <p className="aviso">Após importar, revise cada nota e o valor de cada avaliação. A leitura automática pode errar ou deixar avaliações de fora.</p>
     <div className={'drop' + (on ? ' on' : '')} onClick={() => inp.current?.click()}
       onDragOver={e => { e.preventDefault(); setOn(true); }} onDragLeave={() => setOn(false)}
       onDrop={e => { e.preventDefault(); e.stopPropagation(); setOn(false); const f = e.dataTransfer.files[0]; if (f) onArquivo(f); }}>

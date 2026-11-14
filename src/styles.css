@@ -347,3 +347,14 @@ footer{text-align:center;color:var(--mut);font-size:13px;margin-top:40px}
 .tour-dots button.on{width:26px;background:var(--lav)}
 .tour-act{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
 @media (max-width:900px){.side-foot .btn.glass{display:none}}
+
+/* Avisos visíveis em todas as telas, sem depender de um toast temporário. */
+.dev-notice{background:var(--warnbg);border:1px solid var(--warn);border-radius:14px;padding:14px 18px;margin-bottom:24px;color:var(--ink)}
+.dev-notice strong{color:var(--warn)}
+.dev-notice p{margin:4px 0 0;font-size:14px}
+.dev-notice ul{margin:8px 0 0;padding-left:20px}
+.item-feedback{grid-column:1/-1;color:var(--warn);font-size:12px;line-height:1.4}
+@media(max-width:1200px){.item-feedback{grid-area:auto;grid-column:1/-1}}
+.sim-controls{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.sim-controls p{margin:0}
+.gc-head + .aviso{margin-bottom:12px}

@@ -34,6 +34,13 @@ export const num = (s: unknown): number | null => {
 export const fmt = (n: number) => (Math.round(n * 100 + 1e-7) / 100).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
 export const uid = () => Math.random().toString(36).slice(2, 9);
 
+// Um zero em uma avaliação agendada ainda não é uma nota definitiva.
+export function itemPendente(it: Pick<Item, 'nota' | 'data'>): boolean {
+  const hoje = new Date();
+  const dia = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}-${String(hoje.getDate()).padStart(2, '0')}`;
+  return num(it.nota) === null || (num(it.nota) === 0 && !!it.data && it.data > dia);
+}
+
 // Um grau no modo "simples" (trabalhos + prova) ou "lista" (cada nota separada).
 // Campo vazio = nota que ainda não saiu (pendente).
 export function calcGrau(g: Pick<Grau, 'modo'> & Partial<Grau>, limitar?: boolean): GrauCalc {
@@ -44,8 +51,8 @@ export function calcGrau(g: Pick<Grau, 'modo'> & Partial<Grau>, limitar?: boolea
       const n = num(it.nota), m = num(it.max) || 0;
       if (it.tipo === 'extra') { e += n || 0; continue; }
       if (it.tipo === 'trab') trabMax += m; else provaMax += m;
-      if (n === null) pend.push({ nome: it.nome || (it.tipo === 'trab' ? 'Trabalho' : 'Prova'), max: m, tipo: it.tipo });
-      else { known += n; if (it.tipo === 'trab') trabTem += n; }
+      if (itemPendente(it)) pend.push({ nome: it.nome || (it.tipo === 'trab' ? 'Trabalho' : 'Prova'), max: m, tipo: it.tipo });
+      else { known += n!; if (it.tipo === 'trab') trabTem += n!; }
     }
   } else {
     trabMax = Math.min(10, Math.max(0, num(g.trabMax) ?? 0)); provaMax = 10 - trabMax; e = num(g.extra) || 0;
@@ -122,11 +129,23 @@ export function parseCanvas(txt: string): Importado {
   }
   const pct: Partial<Record<'g1' | 'g2' | 'sub', number>> = {};
   for (const m of txt.matchAll(/(?:^|\s)(G1|G2|Substitui\S*)\s+(\d+(?:[.,]\d+)?)\s*%/g)) pct[m[1].startsWith('S') ? 'sub' : m[1].toLowerCase() as 'g1' | 'g2'] = num(m[2])! / 10;
+  // O percentual do Canvas normaliza pelo total cadastrado (ex.: 3,60/8 = 45%).
+  // Preserve os pontos, pois esse percentual não equivale a 4,5 pontos no grau.
+  const pontos: Partial<Record<'g1' | 'g2', { nota: number; max: number }>> = {};
+  for (const m of txt.matchAll(/(?:^|\s)(G1|G2)\s+\d+(?:[.,]\d+)?\s*%\s*(\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)/g)) {
+    pontos[m[1].toLowerCase() as 'g1' | 'g2'] = { nota: num(m[2])!, max: num(m[3])! };
+  }
   const out: Importado = { avisos: [] };
   for (const k of ['g1', 'g2'] as const) {
-    const p = pct[k];
-    const lista: Item[] | null = itens[k].length ? itens[k] : p != null ? [{ id: uid(), nome: 'Nota do ' + k.toUpperCase(), tipo: 'prova', nota: fmt(p), max: '10', data: '' }] : null;
+    const resumo = pontos[k], p = resumo?.nota ?? pct[k];
+    const lista: Item[] | null = itens[k].length ? itens[k] : p != null ? [{ id: uid(), nome: 'Nota do ' + k.toUpperCase(), tipo: 'prova', nota: fmt(p), max: fmt(resumo?.max ?? 10), data: '' }] : null;
     if (!lista) continue;
+    const total = lista.filter(i => i.tipo !== 'extra').reduce((s, i) => s + (num(i.max) || 0), 0);
+    if (total < 10 - EPS) {
+      lista.push({ id: uid(), nome: 'Pontos a conferir', tipo: 'prova', nota: '', max: fmt(10 - total), data: '' });
+      out.avisos.push(`${k.toUpperCase()}: foram identificados ${fmt(total)} de 10 pontos. Confira os ${fmt(10 - total)} pontos restantes; eles ficaram pendentes.`);
+    }
+    if (!resumo && !itens[k].length) out.avisos.push(`${k.toUpperCase()}: só foi encontrado o percentual. Confira a nota e o valor total no Canvas.`);
     out[k] = { modo: 'lista', trabMax: '4', trab: '', prova: '', extra: '', itens: lista };
     const soma = lista.reduce((s, i) => s + (num(i.nota) || 0), 0);
     if (p != null && Math.abs(soma - p) > 0.06) out.avisos.push(`${k.toUpperCase()}: itens somam ${fmt(soma)}, o Canvas diz ${fmt(p)}`);
