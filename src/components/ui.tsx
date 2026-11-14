@@ -1,5 +1,5 @@
 // Peças pequenas usadas em todas as telas
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import gsap from 'gsap';
 import { EPS, fmt, num } from '../logic';
 
@@ -68,9 +68,15 @@ export function Seg<V extends string>({ value, options, onChange, small, label }
     addEventListener('resize', move);
     return () => removeEventListener('resize', move);
   }, [value]);
-  return <div className={'seg' + (small ? ' small' : '')} ref={ref} role="tablist" aria-label={label}>
+  return <div className={'seg' + (small ? ' small' : '')} ref={ref} role="tablist" aria-label={label} onKeyDown={e => {
+    const atual = options.findIndex(([v]) => v === value);
+    const proximo = e.key === 'ArrowRight' ? (atual + 1) % options.length : e.key === 'ArrowLeft' ? (atual + options.length - 1) % options.length : e.key === 'Home' ? 0 : e.key === 'End' ? options.length - 1 : -1;
+    if (proximo < 0) return;
+    e.preventDefault(); onChange(options[proximo][0]);
+    ref.current?.querySelectorAll<HTMLButtonElement>('button')[proximo]?.focus();
+  }}>
     <i className="seg-ind" ref={ind} style={{ left: 4 }} />
-    {options.map(([v, l]) => <button key={v} role="tab" aria-selected={v === value} data-v={v} onClick={() => onChange(v)}>{l}</button>)}
+    {options.map(([v, l]) => <button key={v} role="tab" aria-selected={v === value} tabIndex={v === value ? 0 : -1} data-v={v} onClick={() => onChange(v)}>{l}</button>)}
   </div>;
 }
 
@@ -78,10 +84,11 @@ export function Seg<V extends string>({ value, options, onChange, small, label }
 export function Inp({ value, onChange, className = '', placeholder = '–', label, max }:
   { value: string | undefined; onChange: (v: string) => void; className?: string; placeholder?: string; label: string; max?: number | null }) {
   const passou = max != null && (num(value) ?? 0) > max + EPS;
-  return <input type="text" inputMode="decimal" aria-label={label} className={'inp ' + className + (passou ? ' over' : '')}
+  const erroId = useId();
+  return <><input type="text" inputMode="decimal" aria-label={label} aria-invalid={passou || undefined} aria-describedby={passou ? erroId : undefined} className={'inp ' + className + (passou ? ' over' : '')}
     value={value ?? ''} placeholder={placeholder}
     onFocus={e => e.target.select()} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-    onChange={e => onChange(e.target.value.replace(/[^\d.,]/g, ''))} />;
+    onChange={e => onChange(e.target.value.replace(/[^\d.,]/g, ''))} />{passou && <span className="sr-only" id={erroId}>O valor máximo deste campo é {fmt(max!)}.</span>}</>;
 }
 
 const svg = (d: ReactNode, w = 18, sw = 2.2) =>
@@ -99,23 +106,43 @@ export const Ic = {
 };
 
 // Gaveta lateral ou janela central, com véu, Esc e rolagem travada atrás
-export function Painel({ open, onClose, children, className }: { open: boolean; onClose: () => void; children: ReactNode; className: 'drawer' | 'modal' }) {
+export function Painel({ open, onClose, children, className, label }: { open: boolean; onClose: () => void; children: ReactNode; className: 'drawer' | 'modal'; label?: string }) {
   const veu = useRef<HTMLDivElement>(null), box = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     if (!open) return;
+    const anterior = document.activeElement as HTMLElement | null;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const host = box.current!.parentElement!;
+    const vizinhos = [...host.parentElement!.children].filter((el): el is HTMLElement => el instanceof HTMLElement && el !== host).map(el => ({ el, inert: el.inert }));
+    vizinhos.forEach(({ el }) => { el.inert = true; });
+    const alvos = () => [...box.current!.querySelectorAll<HTMLElement>('button:not([disabled]),input:not([disabled]):not([type=file]):not([type=hidden]),select:not([disabled]),textarea:not([disabled]),[tabindex="0"]')].filter(el => el.getClientRects().length > 0);
+    (box.current!.querySelector<HTMLElement>('[aria-label^="Fechar"]') ?? alvos()[0] ?? box.current)!.focus();
     window.__lenis?.stop();
     const ctx = gsap.context(() => {
       gsap.from(veu.current, { opacity: 0, duration: .3 * T });
       gsap.from(box.current, className === 'drawer' ? { x: '100%', duration: .5 * T, ease: 'power4.out' } : { y: 30, opacity: 0, scale: .96, duration: .4 * T, ease: 'back.out(1.6)' });
     });
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key !== 'Tab') return;
+      const elementos = alvos(), primeiro = elementos[0], ultimo = elementos.at(-1);
+      if (!primeiro) { e.preventDefault(); box.current?.focus(); }
+      else if (!box.current?.contains(document.activeElement) || (!e.shiftKey && document.activeElement === ultimo)) { e.preventDefault(); primeiro.focus(); }
+      else if (e.shiftKey && document.activeElement === primeiro) { e.preventDefault(); ultimo?.focus(); }
+    };
     addEventListener('keydown', esc);
-    return () => { ctx.revert(); removeEventListener('keydown', esc); window.__lenis?.start(); };
+    return () => {
+      ctx.revert(); removeEventListener('keydown', esc); window.__lenis?.start();
+      document.body.style.overflow = overflow;
+      vizinhos.forEach(({ el, inert }) => { el.inert = inert; });
+      if (anterior?.isConnected) anterior.focus();
+    };
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!open) return null;
   return <div>
     <div className="veu" ref={veu} onClick={onClose} />
-    <div className={className + (className === 'modal' ? ' card' : '')} ref={box} role="dialog" aria-modal="true" data-lenis-prevent>{children}</div>
+    <div className={className + (className === 'modal' ? ' card' : '')} ref={box} role="dialog" aria-modal="true" aria-label={label} tabIndex={-1} data-lenis-prevent>{children}</div>
   </div>;
 }
 

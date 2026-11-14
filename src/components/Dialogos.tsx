@@ -10,7 +10,7 @@ export function Ajustes({ open, onClose, d, set, apagar, exportar, restaurar }: 
   apagar: () => void; exportar: () => void; restaurar: (f: File) => void;
 }) {
   const arq = useRef<HTMLInputElement>(null);
-  return <Painel open={open} onClose={onClose} className="drawer">
+  return <Painel open={open} onClose={onClose} className="drawer" label="Ajustes da disciplina">
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <h3>Ajustes da disciplina</h3><button className="ico" onClick={onClose} aria-label="Fechar">{Ic.x}</button>
     </div>
@@ -40,7 +40,7 @@ export function Importar({ open, onClose, onArquivo, onTexto, exportar, prog }: 
   const backup = useRef<HTMLInputElement>(null);
   const [fonte, setFonte] = useState<Fonte | 'passei' | ''>('');
   useLayoutEffect(() => { if (bar.current) gsap.to(bar.current, { width: (prog?.p ?? 0) * 100 + '%', duration: .4 * T }); }, [prog?.p]);
-  return <Painel open={open} onClose={onClose} className="modal">
+  return <Painel open={open} onClose={onClose} className="modal" label="Importar e exportar dados">
     <h3>Importar e exportar</h3>
     <section className="backup-actions" aria-label="Seus dados no Passei">
       <h4>Seus dados no Passei</h4>

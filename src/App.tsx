@@ -223,7 +223,7 @@ export default function App() {
 
     <Ajustes open={ajustes} onClose={() => setAjustes(false)} d={d} set={set} apagar={apagar} exportar={exportar} restaurar={restaurar} />
     <Importar open={imp} onClose={() => { if (!ocupada.current) setImp(false); }} onArquivo={importarArquivo} onTexto={importarTexto} exportar={exportar} prog={prog} />
-    <Onboarding open={tour} onClose={fecharTour} importar={() => { fecharTour(); setImp(true); }} />
+    <Onboarding open={tour} onClose={fecharTour} importar={() => { fecharTour(); setImp(true); }} testar={() => { fecharTour(); testar(); }} />
     {arrastando && <div className="dragzone">Solte para importar</div>}
     <Toast t={toast} />
   </div>;

@@ -88,14 +88,14 @@ function Item({ it, onChange, onDel }: { it: TItem; onChange: (p: Partial<TItem>
   const del = () => gsap.to(ref.current, { height: 0, opacity: 0, paddingTop: 0, paddingBottom: 0, marginTop: -8, duration: .3 * T, ease: 'power2.in', onComplete: onDel });
   return <li ref={ref} className={'item t-' + it.tipo}>
     <button className="tipo" title="Clique para trocar o tipo" onClick={() => onChange({ tipo: PROX[it.tipo] })}>{NOMES[it.tipo]}</button>
-    <input className="nome" value={it.nome} placeholder={NOMES[it.tipo]} aria-label="Nome" onChange={e => onChange({ nome: e.target.value })} />
+    <input className="nome" value={it.nome} placeholder={NOMES[it.tipo]} aria-label={`Nome da avaliação: ${it.nome || NOMES[it.tipo]}`} onChange={e => onChange({ nome: e.target.value })} />
     <div className="nota">
-      <Inp label="Nota" value={it.nota} placeholder="?" max={it.tipo === 'extra' ? null : num(it.max)} onChange={v => onChange({ nota: v })} />
-      {it.tipo !== 'extra' && <><span>/</span><Inp label="Vale quanto" value={it.max} placeholder="vale" onChange={v => onChange({ max: v })} /></>}
+      <Inp label={`Nota de ${it.nome || NOMES[it.tipo]}`} value={it.nota} placeholder="?" max={it.tipo === 'extra' ? null : num(it.max)} onChange={v => onChange({ nota: v })} />
+      {it.tipo !== 'extra' && <><span>/</span><Inp label={`Valor máximo de ${it.nome || NOMES[it.tipo]}`} value={it.max} placeholder="vale" onChange={v => onChange({ max: v })} /></>}
     </div>
     {cal ? <input type="date" className="data" aria-label="Data" value={it.data} onChange={e => onChange({ data: e.target.value })} />
       : <button className="ico cal" title="Adicionar data (opcional)" onClick={() => setCal(true)}>{Ic.cal}</button>}
-    <button className="ico del" title="Remover" onClick={del}>{Ic.x}</button>
+    <button className="ico del" title="Remover" aria-label={`Remover avaliação: ${it.nome || NOMES[it.tipo]}`} onClick={del}>{Ic.x}</button>
     {itemPendente(it) && <small className="item-feedback">{num(it.nota) === 0 ? 'Avaliação futura: este zero está sendo tratado como pendente.' : 'Nota pendente. Preencha quando sair; use 0 somente para uma nota confirmada.'}</small>}
   </li>;
 }
@@ -148,7 +148,7 @@ export function Grau({ k, g, gr, setG, min, usado }: { k: 'g1' | 'g2'; g: TGrau;
       <div className="adds"><button onClick={() => add('trab')}>+ Trabalho</button><button onClick={() => add('prova')}>+ Prova</button><button onClick={() => add('extra')}>+ Extra</button></div>
       {g.itens.some(i => i.tipo !== 'extra') && Math.abs(tm + pm - 10) > EPS && <p className="aviso">Os itens valem {fmt(tm + pm)} de 10.</p>}
     </div>}
-    {usado && <p className="aviso" style={{ color: 'var(--ok)' }}>Trocado pela substituição.</p>}
+    {usado && <p className="aviso" style={{ color: 'var(--ok-ink)' }}>Trocado pela substituição.</p>}
   </section>;
 }
 
