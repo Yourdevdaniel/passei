@@ -4,6 +4,7 @@ import Lenis from 'lenis';
 import { avaliar, fmt, type Db, type Disc, type Grau as TGrau } from './logic';
 import { carregar, doSemestre, lerBackup, novaDisc, proximoSemestre, salvar, semestres } from './store';
 import { aplicarImportacao, parseImportacao, type Fonte, type Importacao } from './importacao';
+import { adicionarDisciplinaTeste } from './exemplo';
 import { BoletimWeb, ParciaisWeb } from './components/WebAluno';
 import { lerArquivo } from './importar';
 import { Ic, RM, Toast, Seg, useAnim } from './components/ui';
@@ -126,6 +127,10 @@ export default function App() {
     setAba('notas'); ir('disc');
     setTimeout(() => document.querySelector<HTMLInputElement>('.titulo')?.select(), 60);
   };
+  const testar = () => {
+    setDb(adicionarDisciplinaTeste); setAvisosImportacao([]); setAba('notas'); ir('disc');
+    avisar('Disciplina de teste com dados fictícios. Você pode editar ou apagar.');
+  };
   const apagar = () => {
     if (!confirm(`Apagar "${d.nome}"? As notas dela somem deste navegador.`)) return;
     setDb(p => { const lista = p.lista.filter((_, i) => i !== p.cur); return { ...p, lista: lista.length ? lista : [novaDisc('Minha disciplina', p.semestre)], cur: 0 }; });
@@ -179,7 +184,7 @@ export default function App() {
     <main className="content"><div className="wrap" ref={corpo}>
       <p className="system-hint">Pode haver erros. Confira sempre as informações no portal da faculdade.</p>
       {avisosImportacao.length > 0 && <details className="import-details"><summary>Detalhes da importação ({avisosImportacao.length})</summary><ul>{avisosImportacao.map((a, i) => <li key={i}>{a}</li>)}</ul></details>}
-      {tela === 'painel' ? <><PainelView db={db} abrir={abrir} nova={nova} importar={() => setImp(true)} exportar={exportar} /><BoletimWeb notas={db.boletim} /></>
+      {tela === 'painel' ? <><PainelView db={db} abrir={abrir} nova={nova} importar={() => setImp(true)} exportar={exportar} testar={testar} /><BoletimWeb notas={db.boletim} /></>
         : tela === 'creditos' ? <CreditosView db={db} setDb={setDb} abrir={abrir} nova={nova} />
         : <div>
           <div className="ph anim-in">

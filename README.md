@@ -16,6 +16,7 @@ Cada grau vale 10 pontos, divididos entre trabalhos e prova do jeito que o profe
 ## O que dá para fazer
 
 - **Painel** do semestre, com a situação de cada disciplina e as próximas avaliações.
+- **Disciplina de teste**: no painel, "Carregar disciplina de teste" adiciona um exemplo com avaliações, datas, notas, créditos e WebAluno preenchidos. Os dados são fictícios; clicar novamente abre o exemplo existente, preservando suas edições.
 - **Semestres**: as disciplinas ficam separadas por semestre.
 - **Notas** em dois modos: simples (trabalhos + prova) ou nota por nota, com nome, valor e data opcional.
 - **Quanto falta**: deixe vazio o que ainda não saiu e o sistema calcula a nota necessária.

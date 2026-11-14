@@ -6,7 +6,7 @@ import { Ic, Img, Inp, Ring } from './ui';
 interface Nav { abrir: (i: number) => void; nova: () => void }
 
 // ---------- painel (tela inicial) ----------
-export function PainelView({ db, abrir, nova, importar, exportar }: Nav & { db: Db; importar: () => void; exportar: () => void }) {
+export function PainelView({ db, abrir, nova, importar, exportar, testar }: Nav & { db: Db; importar: () => void; exportar: () => void; testar: () => void }) {
   const rs = doSemestre(db);
   const comNota = rs.filter(x => x.r.status !== 'vazio');
   const medias = rs.filter(x => x.r.mp != null).map(x => x.r.mf ?? x.r.mp!);
@@ -25,6 +25,7 @@ export function PainelView({ db, abrir, nova, importar, exportar }: Nav & { db: 
           <button className="btn peach" onClick={importar}>{Ic.up} Importar notas</button>
           <button className="btn glass" onClick={exportar}>Exportar dados</button>
           <button className="btn glass" onClick={nova}>{Ic.plus} Nova disciplina</button>
+          <button className="btn glass" onClick={testar}>Carregar disciplina de teste</button>
         </div>
       </div>
       <Img name="hero" />
