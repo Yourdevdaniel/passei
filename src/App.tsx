@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import Lenis from 'lenis';
 import { avaliar, fmt, type Db, type Disc, type Grau as TGrau } from './logic';
-import { carregar, doSemestre, lerBackup, novaDisc, proximoSemestre, resetarDisciplina, salvar, semestres } from './store';
+import { carregar, KEY, doSemestre, lerBackup, novaDisc, proximoSemestre, resetarDisciplina, salvar, semestres } from './store';
 import { aplicarImportacao, materiaDoBoletim, notaDoBoletim, parseImportacao, type Fonte, type Importacao } from './importacao';
 import { adicionarDisciplinaTeste } from './exemplo';
 import { BoletimWeb, ParciaisWeb, ResumoBoletim } from './components/WebAluno';
@@ -38,6 +38,12 @@ export default function App() {
   const linhas = doSemestre(db);
 
   useEffect(() => { setErroSalvar(!salvar(db)); }, [db]);
+  // Outra aba salvou (importação, edição): adota os dados dela, senão esta aba sobrescreve na próxima edição.
+  useEffect(() => {
+    const sincronizar = (e: StorageEvent) => { if (e.key === KEY && e.newValue) setDb(carregar()); };
+    addEventListener('storage', sincronizar);
+    return () => removeEventListener('storage', sincronizar);
+  }, []);
   useEffect(() => {
     const atualizar = () => setOffline(!navigator.onLine);
     addEventListener('online', atualizar); addEventListener('offline', atualizar);
@@ -239,7 +245,7 @@ export default function App() {
           {aba === 'notas' ? <div className="graus">
             <Grau key={d.id + 'g1'} k="g1" g={d.g1} gr={r.g1} setG={setGrau('g1')} min={r.min} usado={r.subUsada === 'G1'} />
             <Grau key={d.id + 'g2'} k="g2" g={d.g2} gr={r.g2} setG={setGrau('g2')} min={r.min} usado={r.subUsada === 'G2'} />
-          </div> : r.g1.invalido || r.g2.invalido ? <p className="aviso">Corrija os valores das avaliações antes de simular.</p> : <Simulador key={d.id} r={r} />}
+          </div> : r.g1.invalido || r.g2.invalido ? <p className="aviso">Corrija os valores das avaliações antes de simular.</p> : <Simulador key={`${d.id}:${r.G1}:${r.g2.trabTem}:${r.g2.trabMax}:${r.g2.e}`} r={r} /* nota real mudou (importação, edição) = simulação recomeça dela */ />}
           <div className="sec-h" style={{ marginTop: 40 }}><h2>Como é calculado</h2><span>modelo de notas da ULBRA</span></div>
           <div className="forms" style={{ marginTop: 0 }}>
             <div className="card fc anim-in">

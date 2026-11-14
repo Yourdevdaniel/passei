@@ -1,7 +1,7 @@
 // Dados do aluno. Ficam só no navegador (localStorage), nada vai para servidor.
 import { avaliar, EPS, fmt, uid, type Aval, type Db, type Disc, type Grau } from './logic';
 
-const KEY = 'notas-v2';
+export const KEY = 'notas-v2';
 
 // "2026/2": o semestre de agora, pelo calendário
 export const semestreAtual = () => { const d = new Date(); return `${d.getFullYear()}/${d.getMonth() < 6 ? 1 : 2}`; };
