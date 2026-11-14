@@ -15,11 +15,13 @@ Cada grau vale 10 pontos, divididos entre trabalhos e prova do jeito que o profe
 
 ## O que dá para fazer
 
-- **Painel** com todas as disciplinas, a situação de cada uma e as próximas avaliações.
+- **Painel** do semestre, com a situação de cada disciplina e as próximas avaliações.
+- **Semestres**: as disciplinas ficam separadas por semestre.
 - **Notas** em dois modos: simples (trabalhos + prova) ou nota por nota, com nome, valor e data opcional.
 - **Quanto falta**: deixe vazio o que ainda não saiu e o sistema calcula a nota necessária.
 - **Simulador**: escolha uma nota para a G1 e veja o que sobra para a prova da G2.
 - **Importar do Canvas**: solte o PDF de "Imprimir notas" ou um print da tela. A leitura é feita no próprio navegador.
+- **Créditos**: você informa os créditos de cada disciplina e o valor do crédito, e vê uma estimativa do custo do semestre. Nenhum valor vem preenchido.
 - **Ponto extra, substituição e exame final.**
 - **Backup** em arquivo, para levar as notas a outro aparelho.
 
@@ -27,25 +29,28 @@ As notas ficam salvas só no navegador (`localStorage`). Nada é enviado para se
 
 ## Rodar
 
-Não tem build. Sirva a pasta com qualquer servidor estático:
+Precisa do Node 18 ou mais novo.
 
 ```
-python -m http.server 5173
+npm install
+npm run dev
 ```
 
 Depois abra `http://localhost:5173`.
 
-## Teste
+Outros comandos:
 
 ```
-node teste.js
+npm test         testa o cálculo das médias e a leitura da página do Canvas
+npm run build    confere os tipos e gera a pasta dist
 ```
 
-Confere o cálculo das médias e a leitura da página de notas do Canvas.
+## Estrutura
 
-## Arquivos
+Vite, React e TypeScript. Animações com GSAP e rolagem suave com Lenis.
 
-- `index.html`: a interface (React, GSAP e Lenis carregados por CDN).
-- `logic.js`: as regras de cálculo e o leitor do Canvas, sem dependências.
-- `teste.js`: o teste do `logic.js`.
-- `img/`: as ilustrações.
+- `src/logic.ts`: regras de cálculo e leitor do Canvas, sem dependência de tela.
+- `src/store.ts`: dados no navegador, semestres e resumo de cada disciplina.
+- `src/importar.ts`: leitura de PDF e imagem (pdf.js e tesseract.js, baixados só na hora de importar).
+- `src/components/`: as telas.
+- `public/img/`: as ilustrações.

@@ -1,5 +1,6 @@
+node_modules/
+dist/
 teste-ocr.txt
 img-original/
-node_modules/
 *.bak.html
 .vercel

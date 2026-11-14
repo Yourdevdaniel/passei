@@ -1,0 +1,199 @@
+import { useEffect, useRef, useState } from 'react';
+import gsap from 'gsap';
+import Lenis from 'lenis';
+import { avaliar, calcGrau, fmt, parseCanvas, type Db, type Disc, type Grau as TGrau } from './logic';
+import { carregar, doSemestre, nomeBonito, normalizar, novaDisc, proximoSemestre, salvar, semestres } from './store';
+import { lerArquivo } from './importar';
+import { Ic, RM, Toast, Seg, useAnim } from './components/ui';
+import { Grau, Resultado, Simulador, Trilha } from './components/Disciplina';
+import { CreditosView, PainelView } from './components/Telas';
+import { Ajustes, Importar } from './components/Dialogos';
+
+type Tela = 'painel' | 'creditos' | 'disc';
+type Aba = 'notas' | 'sim';
+
+export default function App() {
+  const [db, setDb] = useState<Db>(carregar);
+  const [tela, setTela] = useState<Tela>('painel');
+  const [aba, setAba] = useState<Aba>('notas');
+  const [ajustes, setAjustes] = useState(false);
+  const [imp, setImp] = useState(false);
+  const [prog, setProg] = useState<{ p: number; msg: string } | null>(null);
+  const [toast, setToast] = useState<{ msg: string; err?: boolean } | null>(null);
+  const [arrastando, setArrastando] = useState(false);
+  const toastT = useRef(0);
+  const d = db.lista[db.cur];
+  const r = avaliar(d);
+  const linhas = doSemestre(db);
+
+  useEffect(() => salvar(db), [db]);
+  const set = (fn: (d: Disc) => Disc) => setDb(p => ({ ...p, lista: p.lista.map((x, i) => i === p.cur ? fn(x) : x) }));
+  const setGrau = (k: 'g1' | 'g2') => (fn: (g: TGrau) => TGrau) => set(x => ({ ...x, [k]: fn(x[k]) }));
+  const avisar = (msg: string, err?: boolean) => { setToast({ msg, err }); clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(null), 4200); };
+  const topo = () => window.__lenis ? window.__lenis.scrollTo(0, { immediate: true }) : scrollTo(0, 0);
+  const ir = (t: Tela) => { setTela(t); topo(); };
+  const abrir = (i: number) => { setDb(p => ({ ...p, cur: i, semestre: p.lista[i].semestre })); setAba('notas'); ir('disc'); };
+  const trocarSemestre = (s: string) => { setDb(p => ({ ...p, semestre: s })); if (tela === 'disc') ir('painel'); };
+
+  const importarTexto = (txt: string) => {
+    const p = parseCanvas(txt);
+    if (!p.g1 && !p.g2) { avisar('Não achei G1 nem G2 aí. É a página de notas do Canvas?', true); return; }
+    setDb(prev => {
+      const lista = prev.lista.slice(); let cur = prev.cur, alvo = { ...lista[cur] };
+      // só reaproveita uma disciplina em branco; senão cria outra (nunca sobrescreve a errada)
+      const emBranco = (x: Disc) => /^(Minha|Nova) disciplina$/.test(x.nome) && x.semestre === prev.semestre && (['g1', 'g2'] as const).every(k => { const c = calcGrau(x[k], false); return !c.known && !c.e; });
+      const curso = p.curso ? nomeBonito(p.curso) : null;
+      const i = curso ? lista.findIndex(x => x.nome === curso && x.semestre === prev.semestre) : -1;
+      if (i >= 0) { cur = i; alvo = { ...lista[i] }; }
+      else if (curso && tela === 'disc' && emBranco(alvo)) alvo.nome = curso;
+      else if (curso || tela !== 'disc') {
+        const livre = lista.findIndex(emBranco);
+        if (livre >= 0) { cur = livre; alvo = { ...lista[livre], nome: curso || lista[livre].nome }; }
+        else { alvo = novaDisc(curso || 'Disciplina importada', prev.semestre); lista.push(alvo); cur = lista.length - 1; }
+      }
+      if (p.g1) alvo.g1 = p.g1;
+      if (p.g2) alvo.g2 = p.g2;
+      if (p.sub) alvo.sub = p.sub;
+      lista[cur] = alvo;
+      return { ...prev, lista, cur };
+    });
+    setImp(false); setAba('notas'); ir('disc');
+    const n = (p.g1?.itens.length || 0) + (p.g2?.itens.length || 0);
+    avisar(p.avisos.length ? 'Importado, mas confira: ' + p.avisos.join('; ') : `Pronto! ${n} notas importadas.`, !!p.avisos.length);
+  };
+  const importarArquivo = async (file: File) => {
+    setImp(true);
+    try { const t = await lerArquivo(file, (p, msg) => setProg({ p, msg })); setProg(null); importarTexto(t); }
+    catch (e) { setProg(null); avisar('Não consegui ler: ' + (e instanceof Error ? e.message : 'arquivo inválido'), true); }
+  };
+  const acoes = useRef({ importarTexto, importarArquivo });
+  acoes.current = { importarTexto, importarArquivo };
+
+  useEffect(() => { // colar e arrastar em qualquer lugar
+    const paste = (e: ClipboardEvent) => {
+      const f = e.clipboardData?.files[0];
+      if (f) { e.preventDefault(); acoes.current.importarArquivo(f); return; }
+      const t = e.clipboardData?.getData('text') ?? '';
+      if (t.length > 40 && /G[12]/.test(t) && (e.target as HTMLElement).tagName !== 'TEXTAREA') { e.preventDefault(); acoes.current.importarTexto(t); }
+    };
+    let n = 0;
+    const enter = (e: DragEvent) => { if (e.dataTransfer?.types.includes('Files')) { n++; setArrastando(true); } };
+    const leave = () => { if (--n <= 0) { n = 0; setArrastando(false); } };
+    const over = (e: DragEvent) => e.preventDefault();
+    const drop = (e: DragEvent) => { e.preventDefault(); n = 0; setArrastando(false); const f = e.dataTransfer?.files[0]; if (f) acoes.current.importarArquivo(f); };
+    addEventListener('paste', paste); addEventListener('dragenter', enter); addEventListener('dragleave', leave); addEventListener('dragover', over); addEventListener('drop', drop);
+    return () => { removeEventListener('paste', paste); removeEventListener('dragenter', enter); removeEventListener('dragleave', leave); removeEventListener('dragover', over); removeEventListener('drop', drop); };
+  }, []);
+
+  useEffect(() => { // rolagem suave
+    if (RM) return;
+    const l = new Lenis({ lerp: .09 }); window.__lenis = l;
+    const tick = (t: number) => l.raf(t * 1000);
+    gsap.ticker.add(tick); gsap.ticker.lagSmoothing(0);
+    return () => { gsap.ticker.remove(tick); l.destroy(); window.__lenis = undefined; };
+  }, []);
+
+  useAnim(() => { gsap.from('.side .anim-top', { x: -18, opacity: 0, duration: .6, stagger: .05, ease: 'power3.out', clearProps: 'transform,opacity' }); }, []);
+  const corpo = useRef<HTMLDivElement>(null);
+  useAnim(() => { // entrada de cada tela
+    if (!corpo.current) return;
+    gsap.from(corpo.current.querySelectorAll('.anim-in'), { y: 22, opacity: 0, duration: .5, stagger: .05, ease: 'power3.out', clearProps: 'transform,opacity' });
+    gsap.from(corpo.current.querySelectorAll('.barra'), { scaleX: 0, duration: 1.1, delay: .4, ease: 'power3.inOut', clearProps: 'transform' });
+  }, [tela, aba, db.cur, db.semestre]);
+
+  const nova = () => {
+    setDb(p => ({ ...p, lista: [...p.lista, novaDisc('Nova disciplina', p.semestre)], cur: p.lista.length }));
+    setAba('notas'); ir('disc');
+    setTimeout(() => document.querySelector<HTMLInputElement>('.titulo')?.select(), 60);
+  };
+  const apagar = () => {
+    if (!confirm(`Apagar "${d.nome}"? As notas dela somem deste navegador.`)) return;
+    setDb(p => { const lista = p.lista.filter((_, i) => i !== p.cur); return { ...p, lista: lista.length ? lista : [novaDisc('Minha disciplina', p.semestre)], cur: 0 }; });
+    setAjustes(false); ir('painel');
+  };
+  const exportar = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' }));
+    a.download = 'passei-backup.json'; a.click(); URL.revokeObjectURL(a.href);
+  };
+  const restaurar = async (file: File) => {
+    let novo: Db | null = null;
+    try { novo = normalizar(JSON.parse(await file.text())); } catch { /* não é JSON */ }
+    if (!novo) { avisar('Esse arquivo não é um backup do Passei.', true); return; }
+    if (!confirm(`Trocar as ${db.lista.length} disciplinas de agora pelas ${novo.lista.length} do backup?`)) return;
+    setDb(novo); setAjustes(false); ir('painel'); avisar('Backup restaurado.');
+  };
+
+  return <div className="shell">
+    <aside className="side">
+      <svg className="deco" viewBox="0 0 272 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true" fill="none">
+        <path d="M0 78 H150 L190 118" stroke="#48d1e0" strokeWidth="1.2" />
+        <path d="M272 520 L200 600 V760" stroke="#8c84ff" strokeWidth="1.2" />
+        <circle cx="250" cy="880" r="90" stroke="#48d1e0" strokeWidth="1.2" />
+        <circle cx="250" cy="880" r="58" stroke="#fff" strokeOpacity=".35" strokeWidth="1" />
+      </svg>
+      <div className="logo anim-top"><i>{Ic.check}</i><span>Passei<small>modelo de notas da ULBRA</small></span></div>
+      <div className="sem anim-top">
+        <label htmlFor="sem">Semestre</label>
+        <select id="sem" value={db.semestre} onChange={e => trocarSemestre(e.target.value)}>
+          {semestres(db).map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <button title="Criar o próximo semestre" aria-label="Criar o próximo semestre" onClick={() => trocarSemestre(proximoSemestre(semestres(db).at(-1)!))}>{Ic.plus}</button>
+      </div>
+      <nav className="side-list" aria-label="Menu" data-lenis-prevent>
+        <button className={'nav anim-top' + (tela === 'painel' ? ' on' : '')} onClick={() => ir('painel')}>{Ic.home}<span className="nm">Painel</span></button>
+        <button className={'nav anim-top' + (tela === 'creditos' ? ' on' : '')} onClick={() => ir('creditos')}>{Ic.cred}<span className="nm">Créditos</span></button>
+        <div className="side-lbl anim-top">Disciplinas de {db.semestre}</div>
+        {linhas.map(({ d: x, i, r: rx, c }) => <button key={x.id} className={'nav anim-top' + (tela === 'disc' && i === db.cur ? ' on' : '')} onClick={() => abrir(i)} title={x.nome}>
+          <i className={'dot ' + c.tone} /><span className="nm">{x.nome || 'Sem nome'}</span>{rx.mp != null && <span className="mp">{fmt(rx.mf ?? rx.mp)}</span>}
+        </button>)}
+        <button className="nav add anim-top" onClick={nova}>{Ic.plus}<span className="nm">Nova disciplina</span></button>
+      </nav>
+      <div className="side-foot anim-top">
+        <button className="btn peach" onClick={() => setImp(true)}>{Ic.up} Importar</button>
+        <small>Salvo só neste navegador.<br />Projeto de aluno, sem vínculo oficial com a ULBRA.</small>
+      </div>
+    </aside>
+
+    <main className="content"><div className="wrap" ref={corpo}>
+      {tela === 'painel' ? <PainelView db={db} abrir={abrir} nova={nova} importar={() => setImp(true)} />
+        : tela === 'creditos' ? <CreditosView db={db} setDb={setDb} abrir={abrir} nova={nova} />
+        : <div>
+          <div className="ph anim-in">
+            <div className="ph-main">
+              <div className="crumb"><button onClick={() => ir('painel')}>Painel</button> / {d.semestre}</div>
+              <input className="titulo" aria-label="Nome da disciplina" title="Clique para renomear" value={d.nome}
+                onChange={e => set(x => ({ ...x, nome: e.target.value }))} onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }} />
+            </div>
+            <div className="ph-act">
+              <button className="btn line" onClick={() => setImp(true)}>{Ic.up} Importar</button>
+              <button className="btn line" onClick={() => setAjustes(true)}>{Ic.gear} Ajustes</button>
+            </div>
+          </div>
+          <Trilha r={r} d={d} />
+          <Resultado r={r} d={d} set={set} />
+          <div className="tabs"><Seg label="Seção" value={aba} onChange={setAba} options={[['notas', 'Minhas notas'], ['sim', 'Simulador']]} /></div>
+          {aba === 'notas' ? <div className="graus">
+            <Grau key={d.id + 'g1'} k="g1" g={d.g1} gr={r.g1} setG={setGrau('g1')} min={r.min} usado={r.subUsada === 'G1'} />
+            <Grau key={d.id + 'g2'} k="g2" g={d.g2} gr={r.g2} setG={setGrau('g2')} min={r.min} usado={r.subUsada === 'G2'} />
+          </div> : <Simulador key={d.id} r={r} />}
+          <div className="sec-h" style={{ marginTop: 40 }}><h2>Como é calculado</h2><span>modelo de notas da ULBRA</span></div>
+          <div className="forms" style={{ marginTop: 0 }}>
+            <div className="card fc anim-in">
+              <div className="eq"><div className="frac"><span>G1 + (G2 × 2)</span><i className="barra" style={{ background: 'var(--mint)' }} /><span>3</span></div><span>=</span><span className="res">MP</span></div>
+              <p>Média parcial. Precisa de {fmt(r.min)} para passar direto.</p>
+            </div>
+            <div className="card fc anim-in">
+              <div className="eq"><div className="frac"><span>MP + (EF × 2)</span><i className="barra" style={{ background: 'var(--peach)' }} /><span>3</span></div><span>=</span><span className="res">MF</span></div>
+              <p>Média final, se for para o exame. Também precisa de {fmt(r.min)}.</p>
+            </div>
+          </div>
+        </div>}
+    </div></main>
+
+    <Ajustes open={ajustes} onClose={() => setAjustes(false)} d={d} set={set} apagar={apagar} exportar={exportar} restaurar={restaurar} />
+    <Importar open={imp} onClose={() => { if (!prog) setImp(false); }} onArquivo={importarArquivo} onTexto={importarTexto} prog={prog} />
+    {arrastando && <div className="dragzone">Solte para importar</div>}
+    <Toast t={toast} />
+  </div>;
+}
