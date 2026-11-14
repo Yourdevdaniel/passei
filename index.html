@@ -129,6 +129,16 @@ img.slot{display:block;max-width:100%;height:auto;object-fit:contain}
 .ag small{color:var(--mut)}
 .ag em{font-style:normal;color:var(--mut);font-size:14px;white-space:nowrap}
 .vazio-txt{color:var(--mut);padding:14px 0;margin:0;font-size:14px}
+.pg-h{font-size:clamp(22px,3vw,30px);font-weight:800;letter-spacing:-.03em;margin:0}
+.stat .inp.big{font-size:22px;padding:4px 8px;margin-top:4px;text-align:left}
+.ag.cr{grid-template-columns:1fr auto 110px}
+.ag.cr em{text-align:right;font-weight:700;color:var(--ink)}
+.cr-nome{text-align:left;display:flex;align-items:center;gap:10px;min-width:0}
+.cr-nome b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cr-nome:hover b{color:var(--lav)}
+.cr-in{display:flex;align-items:center;gap:8px}
+.cr-in .inp{width:64px}
+@media (max-width:560px){.ag.cr{grid-template-columns:1fr auto}.ag.cr em{grid-column:1/-1;text-align:left}.cr-in small{display:none}}
 
 /* trilha G1 → G2 → média → exame */
 .trilha{padding:18px 22px;margin-bottom:16px;overflow-x:auto}
@@ -760,6 +770,34 @@ function PainelView({ db, abrir, nova, importar }) {
   </div>`;
 }
 
+// ---------- créditos por disciplina ----------
+// ponytail: custo = créditos × valor do crédito, um valor só para todas. Trocar aqui quando chegarem os valores reais (por curso, turno, desconto).
+const IcCred = html`<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="3"/><path d="M3 11h18M7 15h4"/></svg>`;
+const reais = n => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+function CreditosView({ db, setDb, abrir, nova }) {
+  const valor = num(db.valorCredito);
+  const linhas = db.lista.map((d, i) => ({ d, i, cr: num(d.creditos), ok: resumoCurto(avaliar(d)).tone === 'ok' }));
+  const total = linhas.reduce((s, l) => s + (l.cr || 0), 0), feitos = linhas.reduce((s, l) => s + (l.ok ? l.cr || 0 : 0), 0);
+  const setCr = (i, v) => setDb(p => ({ ...p, lista: p.lista.map((x, j) => j === i ? { ...x, creditos: v } : x) }));
+  return html`<div>
+    <div className="ph anim-in"><div className="ph-main"><div className="crumb">Passei / créditos</div><h1 className="pg-h">Créditos por disciplina</h1></div></div>
+    <div className="stats">
+      <div className="card stat anim-in"><small>Valor do crédito (R$)</small><${Inp} className="big" label="Valor do crédito em reais" placeholder="0,00" value=${db.valorCredito} onChange=${v => setDb(p => ({ ...p, valorCredito: v }))}/></div>
+      <div className="card stat anim-in"><small>Créditos no semestre</small><b>${fmt(total)}</b></div>
+      <div className="card stat ok anim-in"><small>Créditos já aprovados</small><b>${fmt(feitos)}</b></div>
+      <div className="card stat anim-in"><small>Total do semestre</small><b>${valor != null ? reais(total * valor) : '–'}</b></div>
+    </div>
+    <section className="card agenda anim-in">
+      ${linhas.map(l => html`<div key=${l.d.id} className="ag cr">
+        <button className="cr-nome" onClick=${() => abrir(l.i)} title="Abrir disciplina"><i className=${'dot ' + (l.ok ? 'ok' : '')}/> <b>${l.d.nome || 'Sem nome'}</b></button>
+        <label className="cr-in"><${Inp} label=${'Créditos de ' + l.d.nome} placeholder="0" value=${l.d.creditos} onChange=${v => setCr(l.i, v)}/><small>créditos</small></label>
+        <em>${valor != null && l.cr != null ? reais(l.cr * valor) : '–'}</em>
+      </div>`)}
+    </section>
+    <button className="btn line" onClick=${nova}>${IcPlus} Nova disciplina</button>
+  </div>`;
+}
+
 // ---------- app ----------
 function App() {
   const [db, setDb] = useState(carregar);
@@ -878,6 +916,7 @@ function App() {
       <div className="logo anim-top"><i>${Ic.check}</i><span>Passei<small>modelo de notas da ULBRA</small></span></div>
       <nav className="side-list" aria-label="Menu" data-lenis-prevent>
         <button className=${'nav anim-top' + (tela === 'painel' ? ' on' : '')} onClick=${irPainel}>${IcHome}<span className="nm">Painel</span></button>
+        <button className=${'nav anim-top' + (tela === 'creditos' ? ' on' : '')} onClick=${() => { setTela('creditos'); topo(); }}>${IcCred}<span className="nm">Créditos</span></button>
         <div className="side-lbl anim-top">Disciplinas</div>
         ${db.lista.map((x, i) => { const rx = avaliar(x), c = resumoCurto(rx), on = tela === 'disc' && i === db.cur; return html`<button key=${x.id} className=${'nav anim-top' + (on ? ' on' : '')} onClick=${() => abrir(i)} title=${x.nome}>
           <i className=${'dot ' + c.tone}/><span className="nm">${x.nome || 'Sem nome'}</span>${rx.mp != null && html`<span className="mp">${fmt(rx.mf ?? rx.mp)}</span>`}</button>`; })}
@@ -890,7 +929,8 @@ function App() {
     </aside>
 
     <main className="content"><div className="wrap" ref=${corpo}>
-      ${tela === 'painel' ? html`<${PainelView} db=${db} abrir=${abrir} nova=${nova} importar=${() => setImp(true)}/>` : html`<div>
+      ${tela === 'painel' ? html`<${PainelView} db=${db} abrir=${abrir} nova=${nova} importar=${() => setImp(true)}/>`
+      : tela === 'creditos' ? html`<${CreditosView} db=${db} setDb=${setDb} abrir=${abrir} nova=${nova}/>` : html`<div>
         <div className="ph anim-in">
           <div className="ph-main">
             <div className="crumb"><button onClick=${irPainel}>Painel</button> / disciplina</div>
