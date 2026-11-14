@@ -3,12 +3,13 @@ import { MenuDisciplina } from './MenuDisciplina';
 // Telas gerais: painel do semestre e créditos
 import { fmt, num, type Db, type Disc } from '../logic';
 import { chipTom, doSemestre } from '../store';
-import { Ic, Img, Inp, Ring } from './ui';
+import { Ic, Img, Inp, Ring, Seg } from './ui';
 
 interface Nav { abrir: (i: number) => void; nova: () => void }
 
 // ---------- painel (tela inicial) ----------
 export function PainelView({ db, abrir, nova, importar, exportar, testar, remover, resetarTudo }: Nav & { db: Db; importar: () => void; exportar: () => void; testar: () => void; remover: (ids: string[]) => void; resetarTudo: () => void }) {
+  const [visualizacao, setVisualizacao] = useState<'notas' | 'cartoes'>('notas');
   const [selecionadas, selecionar] = useState<string[]>([]);
   const [menu, setMenu] = useState<{ i: number; x: number; y: number } | null>(null);
   const rs = doSemestre(db);
@@ -50,8 +51,23 @@ export function PainelView({ db, abrir, nova, importar, exportar, testar, remove
     </div>}
 
     <div className="sec-h"><h2>Disciplinas de {db.semestre}</h2><span>clique para abrir</span></div>
+    <div className="dashboard-view"><Seg label="Visualização das disciplinas" value={visualizacao} onChange={setVisualizacao} options={[['notas', 'Visão geral'], ['cartoes', 'Cartões']]} /><p className="hint">Notas salvas. Simulações não alteram este resumo.</p></div>
+    {visualizacao === 'notas' && <section className="card dashboard-grades" aria-label="Visão geral das notas">
+      <div className="dashboard-scroll" role="region" aria-label="Notas por disciplina" tabIndex={0}><table>
+        <caption>G1, G2 e resultado de {db.semestre}</caption>
+        <thead><tr><th scope="col">Disciplina</th><th scope="col">G1</th><th scope="col">G2</th><th scope="col">Média</th><th scope="col">Situação</th><th scope="col"><span className="sr-only">Ações</span></th></tr></thead>
+        <tbody>{rs.map(({ d, i, r, c }) => <tr key={d.id} onContextMenu={e => { e.preventDefault(); setMenu({ i, x: e.clientX, y: e.clientY }); }}>
+          <th scope="row"><label className="dashboard-select"><input type="checkbox" aria-label={'Selecionar ' + d.nome} checked={selecionadas.includes(d.id)} onChange={e => selecionar(e.target.checked ? [...selecionadas, d.id] : selecionadas.filter(id => id !== d.id))} /><span className="sr-only">Selecionar</span></label><button className="dashboard-name" onClick={() => abrir(i)}>{d.nome || 'Sem nome'}</button></th>
+          <td>{r.G1 == null ? <span className="grade-pending">Pendente</span> : fmt(r.G1)}</td>
+          <td>{r.G2 == null ? <span className="grade-pending">Pendente</span> : fmt(r.G2)}</td>
+          <td>{r.mf == null && r.mp == null ? '—' : fmt(r.mf ?? r.mp!)}</td>
+          <td><span className={'chip ' + chipTom(c.tone)}>{c.label}</span></td>
+          <td><button className="dashboard-actions" aria-label={'Ações de ' + d.nome} aria-haspopup="menu" onClick={e => { const b = e.currentTarget.getBoundingClientRect(); setMenu({ i, x: b.right - 240, y: b.bottom }); }}>⋯</button></td>
+        </tr>)}</tbody>
+      </table></div>
+    </section>}
     <div className="selection-tools"><button className="btn line" onClick={() => { selecionar([]); resetarTudo(); }}>Resetar tudo</button><button className="btn line" onClick={() => selecionar(selecionadas.length === rs.length ? [] : rs.map(x => x.d.id))}>Selecionar todas</button>{selecionadas.length > 0 && <><span>{selecionadas.length} selecionadas</span><button className="btn line" onClick={() => { remover(selecionadas); selecionar([]); }}>Remover selecionadas</button></>}</div>
-    <div className="dgrid">
+    {visualizacao === 'cartoes' && <div className="dgrid">
       {rs.map(({ d, i, r, c }) => <div key={d.id} className="discipline-card" onContextMenu={e => { e.preventDefault(); setMenu({ i, x: e.clientX, y: e.clientY }); }}>
         <div className="card-tools"><label><input type="checkbox" aria-label={'Selecionar ' + d.nome} checked={selecionadas.includes(d.id)} onChange={e => selecionar(e.target.checked ? [...selecionadas, d.id] : selecionadas.filter(id => id !== d.id))} />Selecionar</label><button aria-label={'Ações de ' + d.nome} aria-haspopup="menu" onClick={e => { const b = e.currentTarget.getBoundingClientRect(); setMenu({ i, x: b.right - 240, y: b.bottom }); }}>⋯</button></div>
         <button className="card dcard anim-in" onClick={() => abrir(i)}>
@@ -64,7 +80,7 @@ export function PainelView({ db, abrir, nova, importar, exportar, testar, remove
         </div>
       </button></div>)}
       <button className="card dcard novo anim-in" onClick={nova}>{Ic.plus} Nova disciplina</button>
-    </div>
+    </div>}
 
     {menu && <MenuDisciplina key={menu.i} x={menu.x} y={menu.y} fechar={() => setMenu(null)} abrir={() => abrir(menu.i)} nova={nova} remover={() => { selecionar(ids => ids.filter(id => id !== db.lista[menu.i].id)); remover([db.lista[menu.i].id]); }} />}
     <div className="sec-h"><h2>Próximas avaliações</h2><span>notas com data e ainda sem valor</span></div>

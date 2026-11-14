@@ -605,3 +605,25 @@ footer{text-align:center;color:var(--mut);font-size:13px;margin-top:40px}
 
 .backup-actions summary{cursor:pointer;font-weight:600;min-height:32px;display:list-item}
 .backup-actions[open] summary{margin-bottom:12px}
+
+.dashboard-view{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.dashboard-view .hint{margin:0}
+.dashboard-grades{overflow:hidden;margin-bottom:16px;min-width:0;max-width:100%;contain:layout paint}
+.dashboard-scroll{overflow-x:auto;contain:inline-size;max-width:100%;scrollbar-width:thin;scrollbar-color:var(--lav) var(--soft)}
+.dashboard-grades table{width:100%;border-collapse:collapse;text-align:left;font-size:14px}
+.dashboard-grades caption{text-align:left;padding:18px 20px;font-weight:600;color:var(--mut);font-size:13px;border-bottom:1px solid var(--line)}
+.dashboard-grades th,.dashboard-grades td{padding:14px 16px;border-bottom:1px solid var(--line)}
+.dashboard-grades thead{background:var(--soft);color:var(--mut);font-size:12px}
+.dashboard-grades tbody tr:last-child>*{border-bottom:0}
+.dashboard-grades tbody tr:hover{background:var(--soft)}
+.dashboard-grades tbody th{min-width:230px;font-weight:600}
+.dashboard-grades td{white-space:nowrap;font-variant-numeric:tabular-nums}
+.dashboard-name{display:inline-block;text-align:left;min-height:44px;max-width:300px;vertical-align:middle}
+.dashboard-name:hover{text-decoration:underline;text-underline-offset:4px}
+.dashboard-actions{width:44px;height:44px;font-size:24px;border-radius:10px}
+.dashboard-actions:hover{background:var(--line)}
+.grade-pending{color:var(--mut);font-size:12px}
+.dashboard-select{display:inline-flex;vertical-align:middle;margin-right:12px;min-height:44px;align-items:center}
+.dashboard-select input{width:20px;height:20px;margin:0;accent-color:var(--lav);cursor:pointer}
+@media(max-width:600px){.dashboard-grades th,.dashboard-grades td{padding:10px 12px}.dashboard-grades tbody th{min-width:210px}.dashboard-name{max-width:150px}.dashboard-view .hint{font-size:12px}}
+

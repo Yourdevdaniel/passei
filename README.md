@@ -76,3 +76,5 @@ Endereços desconhecidos mostram a tela 404; `/500`, `/503` e `/505` permitem vi
 No painel, use o botão “⋯” ou o botão direito sobre um cartão para abrir o menu de ações. Setas navegam pelo menu e Escape fecha. Selecione várias disciplinas para remover de uma vez, sempre mediante confirmação. “Resetar tudo” limpa todos os dados acadêmicos locais de todos os semestres; exporte um backup antes.
 
 Ao importar notas, o Passei abre o simulador de uma matéria com nota publicada. O boletim também oferece “Aplicar todas aos simuladores”. Uma parcial publicada é preservada quando o boletim ainda mostra “-”; uma nota preenchida no boletim prevalece. A importação não inventa divisão entre trabalhos e provas para uma nota total do portal.
+
+O painel abre na **Visão geral**, com tabela de G1, G2, média e situação das disciplinas do semestre selecionado. A aba **Cartões** preserva a visualização anterior. Notas pendentes não viram zero; a tabela mostra dados salvos, sem alterações temporárias do simulador. No celular, deslize a tabela para ver as demais colunas.
