@@ -11,6 +11,12 @@ export const grauVazio = (): Grau => ({ modo: 'simples', trabMax: '4', trab: '',
 export const novaDisc = (nome: string, semestre: string): Disc =>
   ({ id: uid(), nome, semestre, g1: grauVazio(), g2: grauVazio(), ef: '', sub: '', minimo: '', limitar: true, creditos: '', valorCredito: '' });
 
+export function resetarDisciplina(db: Db, id: string): Db {
+  const d = db.lista.find(d => d.id === id);
+  if (!d) return db;
+  return { ...db, lista: db.lista.map(x => x.id === id ? { ...novaDisc(x.nome, x.semestre), id } : x), boletim: db.boletim?.filter(n => nomeBonito(n.nome) !== nomeBonito(d.nome)) };
+}
+
 // Completa o que faltar: dados de versões antigas e backups não têm todos os campos
 export function normalizar(v: any): Db | null {
   if (!Array.isArray(v?.lista) || !v.lista.length || !v.lista.every((x: any) => x?.g1 && x?.g2)) return null;
@@ -50,12 +56,14 @@ export function lerBackup(txt: string): Db {
 
 export function carregar(): Db {
   for (const k of [KEY, 'calc-media']) { // 'calc-media' = primeira versão
-    try { const db = normalizar(JSON.parse(localStorage.getItem(k)!)); if (db) return db; } catch { /* dado ausente ou corrompido */ }
+    let raw: string | null = null;
+    try { raw = localStorage.getItem(k); } catch { break; }
+    if (raw !== null) return lerBackup(raw);
   }
   const sem = semestreAtual();
   return { cur: 0, lista: [novaDisc('Minha disciplina', sem)], semestre: sem, valorCredito: '' };
 }
-export const salvar = (db: Db) => { try { localStorage.setItem(KEY, JSON.stringify(db)); } catch { /* navegador sem armazenamento */ } };
+export const salvar = (db: Db): boolean => { try { localStorage.setItem(KEY, JSON.stringify(db)); return true; } catch { return false; } };
 
 // ---------- resumo de uma disciplina (menu, cartões do painel) ----------
 export type Tom = '' | 'ok' | 'warn' | 'bad' | 'peach';

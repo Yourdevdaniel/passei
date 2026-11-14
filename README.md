@@ -63,3 +63,11 @@ Vite, React e TypeScript. Animações com GSAP e rolagem suave com Lenis.
 - `src/importar.ts`: leitura de PDF e imagem (pdf.js e tesseract.js, baixados só na hora de importar).
 - `src/components/`: as telas.
 - `public/img/`: as ilustrações.
+
+## Recuperação e estados da interface
+
+Em Ajustes, **Resetar dados da disciplina** limpa avaliações, simulações, créditos, exame, substituição e dados associados do WebAluno. Preserva nome, semestre e as outras disciplinas. O modal pede confirmação; exporte um backup antes caso queira desfazer.
+
+O carregamento inicial e a leitura de arquivos têm indicadores animados, com movimento reduzido respeitado. Falhas ao salvar mostram um aviso com exportação dos dados em memória. Dados salvos inválidos não são sobrescritos: a tela de recuperação permite baixar o conteúdo original e restaurar um backup validado mediante confirmação. Falhas no leitor permitem tentar novamente; downloads das bibliotecas expiram após 20 segundos.
+
+Endereços desconhecidos mostram a tela 404; `/500`, `/503` e `/505` permitem visualizar os outros estados. O build gera `dist/404.html`. São telas do frontend: os códigos HTTP reais e as páginas de erro de infraestrutura dependem da configuração da hospedagem.

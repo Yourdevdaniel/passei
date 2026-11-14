@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import Lenis from 'lenis';
 import { avaliar, fmt, type Db, type Disc, type Grau as TGrau } from './logic';
-import { carregar, doSemestre, lerBackup, novaDisc, proximoSemestre, salvar, semestres } from './store';
+import { carregar, doSemestre, lerBackup, novaDisc, proximoSemestre, resetarDisciplina, salvar, semestres } from './store';
 import { aplicarImportacao, parseImportacao, type Fonte, type Importacao } from './importacao';
 import { adicionarDisciplinaTeste } from './exemplo';
 import { BoletimWeb, ParciaisWeb } from './components/WebAluno';
@@ -15,7 +15,7 @@ import { jaViuTour, marcarTour, Onboarding } from './components/Onboarding';
 
 type Tela = 'painel' | 'creditos' | 'disc';
 type Aba = 'notas' | 'sim';
-type Confirmacao = { tipo: 'apagar'; id: string; nome: string } | { tipo: 'restaurar'; dados: Db; origem: 'ajustes' | 'importar' };
+type Confirmacao = { tipo: 'apagar' | 'resetar'; id: string; nome: string } | { tipo: 'restaurar'; dados: Db; origem: 'ajustes' | 'importar' };
 
 export default function App() {
   const [db, setDb] = useState<Db>(carregar);
@@ -24,6 +24,8 @@ export default function App() {
   const [ajustes, setAjustes] = useState(false);
   const [imp, setImp] = useState(false);
   const [confirmacao, setConfirmacao] = useState<Confirmacao | null>(null);
+  const [erroSalvar, setErroSalvar] = useState(false);
+  const [offline, setOffline] = useState(() => !navigator.onLine);
   const [avisosImportacao, setAvisosImportacao] = useState<string[]>([]);
   const [prog, setProg] = useState<{ p: number; msg: string } | null>(null);
   const [toast, setToast] = useState<{ msg: string; err?: boolean } | null>(null);
@@ -35,7 +37,12 @@ export default function App() {
   const r = avaliar(d);
   const linhas = doSemestre(db);
 
-  useEffect(() => salvar(db), [db]);
+  useEffect(() => { setErroSalvar(!salvar(db)); }, [db]);
+  useEffect(() => {
+    const atualizar = () => setOffline(!navigator.onLine);
+    addEventListener('online', atualizar); addEventListener('offline', atualizar);
+    return () => { removeEventListener('online', atualizar); removeEventListener('offline', atualizar); };
+  }, []);
   const set = (fn: (d: Disc) => Disc) => setDb(p => ({ ...p, lista: p.lista.map((x, i) => i === p.cur ? fn(x) : x) }));
   const setGrau = (k: 'g1' | 'g2') => (fn: (g: TGrau) => TGrau) => set(x => ({ ...x, [k]: fn(x[k]) }));
   const avisar = (msg: string, err?: boolean) => { setToast({ msg, err }); clearTimeout(toastT.current); toastT.current = window.setTimeout(() => setToast(null), 4200); };
@@ -137,6 +144,7 @@ export default function App() {
   const apagar = () => {
     setAjustes(false); setConfirmacao({ tipo: 'apagar', id: d.id, nome: d.nome });
   };
+  const resetar = () => { setAjustes(false); setConfirmacao({ tipo: 'resetar', id: d.id, nome: d.nome }); };
   const exportar = () => {
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' }));
@@ -150,7 +158,7 @@ export default function App() {
     setAjustes(false); setImp(false);
   };
   const cancelarConfirmacao = () => {
-    if (confirmacao?.tipo === 'apagar' || confirmacao?.origem === 'ajustes') setAjustes(true);
+    if (confirmacao && (confirmacao.tipo !== 'restaurar' || confirmacao.origem === 'ajustes')) setAjustes(true);
     else if (confirmacao) setImp(true);
     setConfirmacao(null);
   };
@@ -160,8 +168,10 @@ export default function App() {
       const id = confirmacao.id;
       setDb(p => { const lista = p.lista.filter(x => x.id !== id); return { ...p, lista: lista.length ? lista : [novaDisc('Minha disciplina', p.semestre)], cur: 0 }; });
       avisar('Disciplina apagada.');
-    } else { setDb(confirmacao.dados); avisar('Dados do Passei restaurados.'); }
-    setConfirmacao(null); setAvisosImportacao([]); setAba('notas'); ir('painel');
+    } else if (confirmacao.tipo === 'resetar') { const id = confirmacao.id; setDb(p => resetarDisciplina(p, id)); avisar('Disciplina resetada. Você pode inserir as notas novamente.'); }
+    else if (confirmacao.tipo === 'restaurar') { setDb(confirmacao.dados); avisar('Dados do Passei restaurados.'); }
+    const destino = confirmacao.tipo === 'resetar' ? 'disc' : 'painel';
+    setConfirmacao(null); setAvisosImportacao([]); setAba('notas'); ir(destino);
   };
 
   return <div className="shell">
@@ -198,6 +208,8 @@ export default function App() {
 
     <main className="content"><div className="wrap" ref={corpo}>
       <p className="system-hint">Pode haver erros. Confira sempre as informações no portal da faculdade.</p>
+      {erroSalvar && <aside className="error-notice" role="alert"><strong>Não foi possível salvar neste navegador.</strong><p>Exporte um backup antes de sair para guardar suas alterações.</p><button className="btn line" onClick={exportar}>Exportar dados</button></aside>}
+      {offline && <p className="connection-notice" role="status">Você está sem conexão. As notas salvas continuam disponíveis; importar PDFs ou imagens pode precisar de internet.</p>}
       {avisosImportacao.length > 0 && <details className="import-details"><summary>Detalhes da importação ({avisosImportacao.length})</summary><ul>{avisosImportacao.map((a, i) => <li key={i}>{a}</li>)}</ul></details>}
       {tela === 'painel' ? <><PainelView db={db} abrir={abrir} nova={nova} importar={() => setImp(true)} exportar={exportar} testar={testar} /><BoletimWeb notas={db.boletim} /></>
         : tela === 'creditos' ? <CreditosView db={db} setDb={setDb} abrir={abrir} nova={nova} />
@@ -236,14 +248,15 @@ export default function App() {
         </div>}
     </div></main>
 
-    <Ajustes open={ajustes} onClose={() => setAjustes(false)} d={d} set={set} apagar={apagar} exportar={exportar} restaurar={restaurar} />
+    <Ajustes open={ajustes} onClose={() => setAjustes(false)} d={d} set={set} apagar={apagar} resetar={resetar} exportar={exportar} restaurar={restaurar} />
     <Importar open={imp} onClose={() => { if (!ocupada.current) setImp(false); }} onArquivo={importarArquivo} onTexto={importarTexto} exportar={exportar} prog={prog} />
     <Onboarding open={tour} onClose={fecharTour} importar={() => { fecharTour(); setImp(true); }} testar={() => { fecharTour(); testar(); }} />
     <Confirmar open={!!confirmacao} onClose={cancelarConfirmacao} onConfirmar={confirmarAcao}
-      titulo={confirmacao?.tipo === 'apagar' ? 'Apagar disciplina?' : 'Restaurar backup?'}
-      rotulo={confirmacao?.tipo === 'apagar' ? 'Apagar disciplina' : 'Restaurar backup'}
+      titulo={confirmacao?.tipo === 'apagar' ? 'Apagar disciplina?' : confirmacao?.tipo === 'resetar' ? 'Resetar disciplina?' : 'Restaurar backup?'}
+      rotulo={confirmacao?.tipo === 'apagar' ? 'Apagar disciplina' : confirmacao?.tipo === 'resetar' ? 'Resetar disciplina' : 'Restaurar backup'}
       texto={confirmacao?.tipo === 'apagar'
         ? `Apagar “${confirmacao.nome}” removerá as notas desta disciplina deste navegador. Esta ação não pode ser desfeita sem um backup.`
+        : confirmacao?.tipo === 'resetar' ? `Resetar “${confirmacao.nome}” apagará notas, avaliações, créditos, ajustes e registros do WebAluno associados a esta disciplina. Serão mantidos apenas nome e semestre. As outras disciplinas não serão alteradas. Esta ação não pode ser desfeita sem um backup.`
         : `A restauração substituirá todos os dados atuais deste navegador: ${db.lista.length} disciplinas, notas, semestres, créditos e WebAluno. O backup contém ${confirmacao?.tipo === 'restaurar' ? confirmacao.dados.lista.length : 0} disciplinas.`} />
     {arrastando && <div className="dragzone">Solte para importar</div>}
     <Toast t={toast} />

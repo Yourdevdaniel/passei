@@ -18,9 +18,9 @@ export function Confirmar({ open, titulo, texto, rotulo, onClose, onConfirmar }:
   </Painel>;
 }
 
-export function Ajustes({ open, onClose, d, set, apagar, exportar, restaurar }: {
+export function Ajustes({ open, onClose, d, set, apagar, resetar, exportar, restaurar }: {
   open: boolean; onClose: () => void; d: Disc; set: (fn: (d: Disc) => Disc) => void;
-  apagar: () => void; exportar: () => void; restaurar: (f: File) => void;
+  apagar: () => void; resetar: () => void; exportar: () => void; restaurar: (f: File) => void;
 }) {
   const arq = useRef<HTMLInputElement>(null);
   return <Painel open={open} onClose={onClose} className="drawer" label="Ajustes da disciplina">
@@ -35,7 +35,7 @@ export function Ajustes({ open, onClose, d, set, apagar, exportar, restaurar }: 
       <p className="hint">Entra no lugar do grau que mais ajuda a sua média.</p></label>
     <label className="row switch">Nota do grau para em 10<input type="checkbox" checked={d.limitar} onChange={e => set(x => ({ ...x, limitar: e.target.checked }))} /></label>
     <p className="hint" style={{ marginTop: -10 }}>Desligue se o professor deixa o ponto extra passar de 10.</p>
-    <button className="danger" onClick={apagar}>Apagar esta disciplina</button>
+    <div className="discipline-actions"><button className="btn line" onClick={resetar}>Resetar dados da disciplina</button><p className="hint">Limpa os dados para inserir novamente, mantendo nome e semestre.</p><button className="danger" onClick={apagar}>Apagar esta disciplina</button></div>
     <h3 style={{ margin: '34px 0 6px', fontSize: 17 }}>Seus dados</h3>
     <p className="hint" style={{ margin: '0 0 12px' }}>Tudo fica salvo só neste navegador. Faça um backup para levar a outro aparelho.</p>
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -53,6 +53,14 @@ export function Importar({ open, onClose, onArquivo, onTexto, exportar, prog }: 
   const backup = useRef<HTMLInputElement>(null);
   const [fonte, setFonte] = useState<Fonte | 'passei' | ''>('');
   useLayoutEffect(() => { if (bar.current) gsap.to(bar.current, { width: (prog?.p ?? 0) * 100 + '%', duration: .4 * T }); }, [prog?.p]);
+  if (prog) return <Painel open={open} onClose={onClose} className="modal" label="Lendo seus arquivos">
+    <div className="import-loading" role="status" aria-live="polite" aria-busy="true">
+      <Img name="importar" /><span className="loading-spinner" aria-hidden="true" />
+      <h3>Lendo seus arquivos</h3><p>{prog.msg}</p>
+      <div className="prog" role="progressbar" aria-label="Importando arquivos" aria-valuenow={Math.round(prog.p * 100)} aria-valuemin={0} aria-valuemax={100}><i ref={bar} /></div>
+      <small>Os arquivos são lidos neste navegador. As informações serão aplicadas ao final.</small>
+    </div>
+  </Painel>;
   return <Painel open={open} onClose={onClose} className="modal" label="Importar e exportar dados">
     <h3>Importar e exportar</h3>
     <section className="backup-actions" aria-label="Seus dados no Passei">
@@ -73,7 +81,6 @@ export function Importar({ open, onClose, onArquivo, onTexto, exportar, prog }: 
       <b>{Ic.up} Solte arquivos de notas ou um backup</b><span>PDFs, imagens, textos ou backup JSON do Passei</span>
       <input ref={inp} type="file" hidden multiple disabled={!!prog} accept="application/pdf,image/*,.txt,application/json,.json" onChange={e => { onArquivo(Array.from(e.target.files ?? [])); e.target.value = ''; }} />
     </div>
-    {prog && <div role="status" aria-live="polite"><div className="prog" role="progressbar" aria-label="Importando arquivos" aria-valuenow={Math.round(prog.p * 100)} aria-valuemin={0} aria-valuemax={100}><i ref={bar} /></div><p className="hint" style={{ color: 'var(--mut)', fontSize: 13, margin: '8px 0 0' }}>{prog.msg}</p></div>}
     <div className="or">ou cole o texto da página</div>
     <label className="import-source">Página de origem<select value={fonte} disabled={!!prog} onChange={e => setFonte(e.target.value as Fonte | 'passei' | '')}>
       <option value="">Identificar automaticamente</option><option value="passei">Passei · Backup dos seus dados (JSON)</option><option value="misto">As três páginas juntas · AULA + WebAluno</option><option value="aula">AULA / Canvas · Notas</option><option value="web-notas">WebAluno · Notas</option><option value="web-parciais">WebAluno · Avaliações parciais (1º e 2º corte)</option>

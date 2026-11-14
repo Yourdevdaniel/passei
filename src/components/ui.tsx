@@ -3,7 +3,7 @@ import { useId, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import gsap from 'gsap';
 import { EPS, fmt, num } from '../logic';
 
-export const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+export const RM = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 export const T = RM ? 0 : 1; // multiplica as durações: 0 para quem pediu menos movimento
 
 // Animação de entrada com limpeza: sem o revert, o StrictMode roda duas vezes e o elemento fica invisível
