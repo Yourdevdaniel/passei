@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MenuDisciplina } from './MenuDisciplina';
 // Telas gerais: painel do semestre e créditos
 import { fmt, num, type Db, type Disc } from '../logic';
@@ -13,6 +13,12 @@ export function PainelView({ db, abrir, nova, importar, exportar, testar, remove
   const [visualizacao, setVisualizacao] = useState<'notas' | 'cartoes'>('notas');
   const [selecionadas, selecionar] = useState<string[]>([]);
   const [menu, setMenu] = useState<{ i: number; x: number; y: number } | null>(null);
+  const semestreAnterior = useRef(db.semestre);
+  useEffect(() => {
+    if (semestreAnterior.current !== db.semestre) {
+      semestreAnterior.current = db.semestre; setTodos(false); selecionar([]); setMenu(null);
+    }
+  }, [db.semestre]);
   const rs = doSemestre(db, todos);
   const comNota = rs.filter(x => x.r.status !== 'vazio' || x.r.g1.known + x.r.g1.e + x.r.g2.known + x.r.g2.e > 0);
   const medias = rs.filter(x => x.r.mp != null).map(x => x.r.mf ?? x.r.mp!);

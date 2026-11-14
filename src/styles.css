@@ -629,3 +629,10 @@ footer{text-align:center;color:var(--mut);font-size:13px;margin-top:40px}
 .dashboard-scope{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--mut)}
 .dashboard-scope select{font:inherit;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--ink)}
 .discipline-card .mini{flex-wrap:wrap}
+
+@media(max-width:900px){
+  .sem{grid-column:1/-1;display:grid;grid-template-columns:auto minmax(0,1fr) 44px;padding:8px 10px;gap:10px}
+  .sem select{width:100%;min-width:0;min-height:44px}
+  .side-foot{grid-row:1}
+}
+@media(max-width:360px){.sem{grid-template-columns:minmax(0,1fr) 44px}}

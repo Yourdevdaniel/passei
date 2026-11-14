@@ -78,3 +78,5 @@ No painel, use o botão “⋯” ou o botão direito sobre um cartão para abri
 Ao importar notas, o Passei abre o simulador de uma matéria com nota publicada. O boletim também oferece “Aplicar todas aos simuladores”. Uma parcial publicada é preservada quando o boletim ainda mostra “-”; uma nota preenchida no boletim prevalece. A importação não inventa divisão entre trabalhos e provas para uma nota total do portal.
 
 O painel abre na **Visão geral**, com tabela de G1, G2, média e situação das disciplinas de todos os semestres, identificadas por período. O filtro **Período** permite restringir ao semestre selecionado no menu. A aba **Cartões** preserva a visualização anterior. Notas pendentes não viram zero; a tabela mostra dados salvos, sem alterações temporárias do simulador. No celular, deslize a tabela para ver as demais colunas.
+
+Trocar o semestre pelo menu lateral também restringe o dashboard ao período escolhido. Para voltar ao histórico completo, selecione **Todos os semestres** no filtro **Período**. No celular, o seletor lateral ocupa uma linha inteira para manter o campo e o botão de adicionar acessíveis.
