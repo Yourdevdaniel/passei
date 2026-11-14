@@ -566,3 +566,42 @@ footer{text-align:center;color:var(--mut);font-size:13px;margin-top:40px}
 .sim-division summary{cursor:pointer;font-size:14px;font-weight:600;min-height:24px}
 .sim-division[open] summary{margin-bottom:12px}
 .sim-division .sl{margin-bottom:0}
+
+/* Controles e menu das disciplinas */
+.brand-mark{flex:none;display:block}
+.sem{gap:8px;min-height:48px;isolation:isolate}
+.sem select{font:inherit;color:#fff;background:#221e5e;border:1px solid #716ab0;border-radius:10px;min-height:36px;padding:4px 28px 4px 10px;min-width:100px;color-scheme:dark}
+.sem select option{background:#221e5e;color:#fff}
+.selection-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 16px}
+.selection-tools span{color:var(--mut);font-size:13px}
+.discipline-card{position:relative;min-width:0}
+.discipline-card .dcard{width:100%;height:100%;padding-top:60px}
+.card-tools{position:absolute;inset:8px 10px auto 14px;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.card-tools label{display:flex;align-items:center;gap:8px;min-height:44px;font-size:13px;color:var(--mut);cursor:pointer}
+.card-tools input{appearance:none;width:20px;height:20px;flex:none;margin:0;border:1.5px solid var(--mut);border-radius:6px;background:var(--card);display:grid;place-content:center}
+.card-tools input:checked{background:var(--lav);border-color:var(--lav)}
+.card-tools input:checked::after{content:'✓';font-weight:800;color:#15123a;font-size:15px;line-height:1}
+.card-tools button{width:44px;height:44px;border-radius:12px;font-size:24px;color:var(--mut)}
+.card-tools button:hover{background:var(--soft);color:var(--ink)}
+.discipline-menu{position:fixed;inset:auto;margin:0;padding:6px;width:240px;max-width:calc(100vw - 16px);background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.discipline-menu button{display:block;width:100%;min-height:48px;text-align:left;padding:10px 14px;border-radius:10px}
+.discipline-menu button:hover,.discipline-menu button:focus-visible{background:var(--soft)}
+.discipline-menu .menu-danger{color:var(--bad-ink)}
+.modal,.drawer,.side-list{scrollbar-width:thin;scrollbar-color:var(--lav) var(--soft)}
+.modal::-webkit-scrollbar,.drawer::-webkit-scrollbar{width:8px}
+.modal::-webkit-scrollbar-track,.drawer::-webkit-scrollbar-track{background:var(--soft);border-radius:99px}
+.modal::-webkit-scrollbar-thumb,.drawer::-webkit-scrollbar-thumb{background:var(--lav);border:2px solid var(--soft);border-radius:99px}
+.modal:has(.import-source){max-height:calc(100dvh - 32px);padding:24px;scrollbar-gutter:stable}
+.modal:has(.import-source) .drop{padding:16px;min-height:100px;gap:4px}
+.modal:has(.import-source) .drop img{width:72px;height:72px}
+.modal:has(.import-source) .or{margin:16px 0}
+.modal:has(.import-source) .backup-actions{padding:14px;margin:14px 0}
+.modal:has(.import-source) .backup-actions h4{margin:0 0 10px}
+.web-aluno>.btn{margin:0 0 16px}
+.modal:has(.import-source) .drop{display:grid;grid-template-columns:56px 1fr;text-align:left}
+.modal:has(.import-source) .drop img{grid-row:1/3;width:56px;height:56px}
+.modal:has(.import-source) .drop b,.modal:has(.import-source) .drop span{grid-column:2}
+.modal:has(.import-source) textarea{min-height:90px;height:90px}
+
+.backup-actions summary{cursor:pointer;font-weight:600;min-height:32px;display:list-item}
+.backup-actions[open] summary{margin-bottom:12px}

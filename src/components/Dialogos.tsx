@@ -63,22 +63,19 @@ export function Importar({ open, onClose, onArquivo, onTexto, exportar, prog }: 
   </Painel>;
   return <Painel open={open} onClose={onClose} className="modal" label="Importar e exportar dados">
     <h3>Importar e exportar</h3>
-    <section className="backup-actions" aria-label="Seus dados no Passei">
-      <h4>Seus dados no Passei</h4>
-      <p>Leve todas as notas, semestres, créditos e dados do WebAluno para outro navegador ou aparelho.</p>
+    <details className="backup-actions"><summary>Backup do Passei · importar ou exportar</summary>
       <div><button className="btn line" disabled={!!prog} onClick={exportar}>Exportar dados</button>
         <button className="btn line" disabled={!!prog} onClick={() => backup.current?.click()}>Importar backup do Passei</button></div>
       <input ref={backup} type="file" hidden disabled={!!prog} accept="application/json,.json" onChange={e => { const f = e.target.files?.[0]; if (f) onArquivo([f]); e.target.value = ''; }} />
-    </section>
+    </details>
     <div className="or">notas do AULA e WebAluno</div>
-    <p>Traga PDFs de várias matérias, imagens ou textos do AULA e do WebAluno. A fonte é identificada por arquivo. No boletim, 1º e 2º substituem G1 e G2 das disciplinas do semestre selecionado; notas com “-” ficam pendentes.</p>
-    <p className="hint">Pode haver erros na leitura. Confira as notas após importar.</p>
+    <p className="hint">Cole suas notas ou envie arquivos. G1 e G2 serão atualizadas no semestre selecionado. Confira os valores após importar.</p>
     <div className={'drop' + (on ? ' on' : '')} role="button" tabIndex={prog ? -1 : 0} aria-disabled={!!prog} aria-label="Escolher arquivos de notas" onClick={() => { if (!prog) inp.current?.click(); }}
       onKeyDown={e => { if (!prog && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); inp.current?.click(); } }}
       onDragOver={e => { e.preventDefault(); setOn(true); }} onDragLeave={() => setOn(false)}
       onDrop={e => { e.preventDefault(); setOn(false); if (!prog) onArquivo(Array.from(e.dataTransfer.files)); }}>
       <Img name="importar" />
-      <b>{Ic.up} Solte arquivos de notas ou um backup</b><span>PDFs, imagens, textos ou backup JSON do Passei</span>
+      <b>{Ic.up} Escolher ou soltar arquivos</b><span>PDFs, imagens, textos ou backup JSON do Passei</span>
       <input ref={inp} type="file" hidden multiple disabled={!!prog} accept="application/pdf,image/*,.txt,application/json,.json" onChange={e => { onArquivo(Array.from(e.target.files ?? [])); e.target.value = ''; }} />
     </div>
     <div className="or">ou cole o texto da página</div>

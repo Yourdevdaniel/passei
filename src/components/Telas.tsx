@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { MenuDisciplina } from './MenuDisciplina';
 // Telas gerais: painel do semestre e créditos
 import { fmt, num, type Db, type Disc } from '../logic';
 import { chipTom, doSemestre } from '../store';
@@ -6,7 +8,9 @@ import { Ic, Img, Inp, Ring } from './ui';
 interface Nav { abrir: (i: number) => void; nova: () => void }
 
 // ---------- painel (tela inicial) ----------
-export function PainelView({ db, abrir, nova, importar, exportar, testar }: Nav & { db: Db; importar: () => void; exportar: () => void; testar: () => void }) {
+export function PainelView({ db, abrir, nova, importar, exportar, testar, remover, resetarTudo }: Nav & { db: Db; importar: () => void; exportar: () => void; testar: () => void; remover: (ids: string[]) => void; resetarTudo: () => void }) {
+  const [selecionadas, selecionar] = useState<string[]>([]);
+  const [menu, setMenu] = useState<{ i: number; x: number; y: number } | null>(null);
   const rs = doSemestre(db);
   const comNota = rs.filter(x => x.r.status !== 'vazio' || x.r.g1.known + x.r.g1.e + x.r.g2.known + x.r.g2.e > 0);
   const medias = rs.filter(x => x.r.mp != null).map(x => x.r.mf ?? x.r.mp!);
@@ -46,8 +50,11 @@ export function PainelView({ db, abrir, nova, importar, exportar, testar }: Nav 
     </div>}
 
     <div className="sec-h"><h2>Disciplinas de {db.semestre}</h2><span>clique para abrir</span></div>
+    <div className="selection-tools"><button className="btn line" onClick={() => { selecionar([]); resetarTudo(); }}>Resetar tudo</button><button className="btn line" onClick={() => selecionar(selecionadas.length === rs.length ? [] : rs.map(x => x.d.id))}>Selecionar todas</button>{selecionadas.length > 0 && <><span>{selecionadas.length} selecionadas</span><button className="btn line" onClick={() => { remover(selecionadas); selecionar([]); }}>Remover selecionadas</button></>}</div>
     <div className="dgrid">
-      {rs.map(({ d, i, r, c }) => <button key={d.id} className="card dcard anim-in" onClick={() => abrir(i)}>
+      {rs.map(({ d, i, r, c }) => <div key={d.id} className="discipline-card" onContextMenu={e => { e.preventDefault(); setMenu({ i, x: e.clientX, y: e.clientY }); }}>
+        <div className="card-tools"><label><input type="checkbox" aria-label={'Selecionar ' + d.nome} checked={selecionadas.includes(d.id)} onChange={e => selecionar(e.target.checked ? [...selecionadas, d.id] : selecionadas.filter(id => id !== d.id))} />Selecionar</label><button aria-label={'Ações de ' + d.nome} aria-haspopup="menu" onClick={e => { const b = e.currentTarget.getBoundingClientRect(); setMenu({ i, x: b.right - 240, y: b.bottom }); }}>⋯</button></div>
+        <button className="card dcard anim-in" onClick={() => abrir(i)}>
         <span className={'chip ' + chipTom(c.tone)}>{c.label}</span>
         <h3>{d.nome || 'Sem nome'}</h3>
         <p>{c.txt}</p>
@@ -55,10 +62,11 @@ export function PainelView({ db, abrir, nova, importar, exportar, testar }: Nav 
         <div className="mini">
           <span>G1 <b>{r.G1 == null ? '–' : fmt(r.G1)}</b></span><span>G2 <b>{r.G2 == null ? '–' : fmt(r.G2)}</b></span><span>Média <b>{r.mp == null ? '–' : fmt(r.mp)}</b></span>
         </div>
-      </button>)}
+      </button></div>)}
       <button className="card dcard novo anim-in" onClick={nova}>{Ic.plus} Nova disciplina</button>
     </div>
 
+    {menu && <MenuDisciplina key={menu.i} x={menu.x} y={menu.y} fechar={() => setMenu(null)} abrir={() => abrir(menu.i)} nova={nova} remover={() => { selecionar(ids => ids.filter(id => id !== db.lista[menu.i].id)); remover([db.lista[menu.i].id]); }} />}
     <div className="sec-h"><h2>Próximas avaliações</h2><span>notas com data e ainda sem valor</span></div>
     <section className="card agenda anim-in">
       {agenda.length ? agenda.slice(0, 8).map(a => <button key={a.id} className="ag" onClick={() => abrir(a.i)}>

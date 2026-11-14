@@ -15,7 +15,7 @@ import { jaViuTour, marcarTour, Onboarding } from './components/Onboarding';
 
 type Tela = 'painel' | 'creditos' | 'disc';
 type Aba = 'notas' | 'sim';
-type Confirmacao = { tipo: 'apagar' | 'resetar'; id: string; nome: string } | { tipo: 'restaurar'; dados: Db; origem: 'ajustes' | 'importar' };
+type Confirmacao = { tipo: 'apagar' | 'resetar'; id: string; nome: string; ids?: string[]; origem?: 'painel' } | { tipo: 'restaurar'; dados: Db; origem: 'ajustes' | 'importar' | 'painel'; limpar?: boolean };
 
 export default function App() {
   const [db, setDb] = useState<Db>(carregar);
@@ -55,8 +55,8 @@ export default function App() {
   const concluirImportacao = (lote: Importacao[], avisos: string[]) => {
     if (lote.length) {
       setDb(prev => lote.reduce(aplicarImportacao, prev));
-      setImp(false); setAba('notas');
-      ir(['web-notas', 'misto'].includes(lote.at(-1)!.fonte) ? 'painel' : 'disc');
+      setImp(false); setAba('sim');
+      ir('disc');
     }
     setAvisosImportacao(avisos);
   };
@@ -158,6 +158,7 @@ export default function App() {
     setAjustes(false); setImp(false);
   };
   const cancelarConfirmacao = () => {
+    if (confirmacao?.origem === 'painel') { setConfirmacao(null); return; }
     if (confirmacao && (confirmacao.tipo !== 'restaurar' || confirmacao.origem === 'ajustes')) setAjustes(true);
     else if (confirmacao) setImp(true);
     setConfirmacao(null);
@@ -165,11 +166,11 @@ export default function App() {
   const confirmarAcao = () => {
     if (!confirmacao) return;
     if (confirmacao.tipo === 'apagar') {
-      const id = confirmacao.id;
-      setDb(p => { const lista = p.lista.filter(x => x.id !== id); return { ...p, lista: lista.length ? lista : [novaDisc('Minha disciplina', p.semestre)], cur: 0 }; });
+      const ids = confirmacao.ids ?? [confirmacao.id];
+      setDb(p => { const lista = p.lista.filter(x => !ids.includes(x.id)); return { ...p, lista: lista.length ? lista : [novaDisc('Minha disciplina', p.semestre)], cur: 0 }; });
       avisar('Disciplina apagada.');
     } else if (confirmacao.tipo === 'resetar') { const id = confirmacao.id; setDb(p => resetarDisciplina(p, id)); avisar('Disciplina resetada. Você pode inserir as notas novamente.'); }
-    else if (confirmacao.tipo === 'restaurar') { setDb(confirmacao.dados); avisar('Dados do Passei restaurados.'); }
+    else if (confirmacao.tipo === 'restaurar') { setDb(confirmacao.dados); avisar(confirmacao.limpar ? 'Todos os dados foram resetados.' : 'Dados do Passei restaurados.'); }
     const destino = confirmacao.tipo === 'resetar' ? 'disc' : 'painel';
     setConfirmacao(null); setAvisosImportacao([]); setAba('notas'); ir(destino);
   };
@@ -182,7 +183,7 @@ export default function App() {
         <circle cx="250" cy="880" r="90" stroke="#48d1e0" strokeWidth="1.2" />
         <circle cx="250" cy="880" r="58" stroke="#fff" strokeOpacity=".35" strokeWidth="1" />
       </svg>
-      <div className="logo anim-top"><i>{Ic.check}</i><span>Passei<small>modelo de notas da ULBRA</small></span></div>
+      <div className="logo anim-top"><img className="brand-mark" src="/logo.svg" alt="" width="40" height="40" /><span>Passei<small>modelo de notas da ULBRA</small></span></div>
       <div className="sem anim-top">
         <label htmlFor="sem">Semestre</label>
         <select id="sem" value={db.semestre} onChange={e => trocarSemestre(e.target.value)}>
@@ -211,7 +212,7 @@ export default function App() {
       {erroSalvar && <aside className="error-notice" role="alert"><strong>Não foi possível salvar neste navegador.</strong><p>Exporte um backup antes de sair para guardar suas alterações.</p><button className="btn line" onClick={exportar}>Exportar dados</button></aside>}
       {offline && <p className="connection-notice" role="status">Você está sem conexão. As notas salvas continuam disponíveis; importar PDFs ou imagens pode precisar de internet.</p>}
       {avisosImportacao.length > 0 && <details className="import-details"><summary>Detalhes da importação ({avisosImportacao.length})</summary><ul>{avisosImportacao.map((a, i) => <li key={i}>{a}</li>)}</ul></details>}
-      {tela === 'painel' ? <><PainelView db={db} abrir={abrir} nova={nova} importar={() => setImp(true)} exportar={exportar} testar={testar} /><BoletimWeb notas={db.boletim} usar={nota => {
+      {tela === 'painel' ? <><PainelView resetarTudo={() => setConfirmacao({ tipo: 'restaurar', origem: 'painel', limpar: true, dados: { cur: 0, semestre: db.semestre, lista: [novaDisc('Minha disciplina', db.semestre)], valorCredito: '' } })} remover={ids => setConfirmacao({ tipo: 'apagar', id: ids[0], ids, nome: ids.length === 1 ? db.lista.find(d => d.id === ids[0])!.nome : `${ids.length} disciplinas selecionadas`, origem: 'painel' })} db={db} abrir={abrir} nova={nova} importar={() => setImp(true)} exportar={exportar} testar={testar} /><BoletimWeb notas={db.boletim} usarTodas={() => { setDb(prev => aplicarImportacao(prev, { fonte: 'web-notas', materias: [], boletim: prev.boletim, avisos: [] })); setAba('sim'); ir('disc'); }} usar={nota => {
         setDb(prev => aplicarImportacao(prev, { fonte: 'web-notas', materias: [materiaDoBoletim(nota)], avisos: [] }));
         setAba('sim'); ir('disc');
         avisar('G1 e G2 do boletim aplicadas ao semestre selecionado.');
@@ -256,10 +257,10 @@ export default function App() {
     <Importar open={imp} onClose={() => { if (!ocupada.current) setImp(false); }} onArquivo={importarArquivo} onTexto={importarTexto} exportar={exportar} prog={prog} />
     <Onboarding open={tour} onClose={fecharTour} importar={() => { fecharTour(); setImp(true); }} testar={() => { fecharTour(); testar(); }} />
     <Confirmar open={!!confirmacao} onClose={cancelarConfirmacao} onConfirmar={confirmarAcao}
-      titulo={confirmacao?.tipo === 'apagar' ? 'Apagar disciplina?' : confirmacao?.tipo === 'resetar' ? 'Resetar disciplina?' : 'Restaurar backup?'}
-      rotulo={confirmacao?.tipo === 'apagar' ? 'Apagar disciplina' : confirmacao?.tipo === 'resetar' ? 'Resetar disciplina' : 'Restaurar backup'}
-      texto={confirmacao?.tipo === 'apagar'
-        ? `Apagar “${confirmacao.nome}” removerá as notas desta disciplina deste navegador. Esta ação não pode ser desfeita sem um backup.`
+      titulo={confirmacao?.tipo === 'restaurar' && confirmacao.limpar ? 'Resetar todos os dados?' : confirmacao?.tipo === 'apagar' ? (confirmacao.ids && confirmacao.ids.length > 1 ? 'Apagar disciplinas selecionadas?' : 'Apagar disciplina?') : confirmacao?.tipo === 'resetar' ? 'Resetar disciplina?' : 'Restaurar backup?'}
+      rotulo={confirmacao?.tipo === 'restaurar' && confirmacao.limpar ? 'Apagar todos os dados' : confirmacao?.tipo === 'apagar' ? (confirmacao.ids && confirmacao.ids.length > 1 ? 'Apagar disciplinas' : 'Apagar disciplina') : confirmacao?.tipo === 'resetar' ? 'Resetar disciplina' : 'Restaurar backup'}
+      texto={confirmacao?.tipo === 'restaurar' && confirmacao.limpar ? 'Esta ação apagará todas as disciplinas, notas, semestres, boletim do WebAluno e créditos deste navegador. Exporte um backup antes de continuar se quiser recuperá-los. Esta ação não pode ser desfeita sem um backup.' : confirmacao?.tipo === 'apagar'
+        ? `Apagar “${confirmacao.nome}” removerá as disciplinas selecionadas e suas notas deste navegador. Esta ação não pode ser desfeita sem um backup.`
         : confirmacao?.tipo === 'resetar' ? `Resetar “${confirmacao.nome}” apagará notas, avaliações, créditos, ajustes e registros do WebAluno associados a esta disciplina. Serão mantidos apenas nome e semestre. As outras disciplinas não serão alteradas. Esta ação não pode ser desfeita sem um backup.`
         : `A restauração substituirá todos os dados atuais deste navegador: ${db.lista.length} disciplinas, notas, semestres, créditos e WebAluno. O backup contém ${confirmacao?.tipo === 'restaurar' ? confirmacao.dados.lista.length : 0} disciplinas.`} />
     {arrastando && <div className="dragzone">Solte para importar</div>}
