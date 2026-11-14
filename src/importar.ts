@@ -15,6 +15,42 @@ const script = (src: string) => libs[src] ||= new Promise<void>((ok, err) => {
 }).catch(e => { delete libs[src]; throw e; });
 
 type Prog = (p: number, msg: string) => void;
+export type ItemPdf = { str: string; hasEOL?: boolean; transform: number[] };
+
+// PDF do "Imprimir notas" do Canvas: o pdf.js entrega o texto por coluna (nomes, depois pontuações).
+// Remonta cada linha da tabela pela posição, no formato da página copiada que o parseCanvas já lê:
+// nome, grupo, datas, pontuação e comentários, cada um numa linha.
+export function textoDaPagina(itens: ItemPdf[]): string {
+  const vis = itens.filter(i => i.str.trim());
+  const x = (i: ItemPdf) => i.transform[4], y = (i: ItemPdf) => i.transform[5];
+  const cab = (s: string) => vis.find(i => i.str.trim() === s);
+  const entrega = cab('Entrega'), pontuacao = cab('Pontuação');
+  if (!entrega || !pontuacao) return itens.map(i => i.str + (i.hasEOL ? '\n' : ' ')).join('');
+  const col = (i: ItemPdf) => x(i) < x(entrega) - 5 ? 0 : x(i) < x(pontuacao) - 5 ? 1 : x(i) < x(pontuacao) + 70 ? 2 : 3;
+  const visuais = (xs: ItemPdf[]) => { // agrupa itens na mesma altura
+    const out: string[] = [];
+    let yAnt = Infinity;
+    for (const i of xs) { if (yAnt - y(i) > 2) out.push(''); out[out.length - 1] += (out[out.length - 1] ? ' ' : '') + i.str.trim(); yAnt = y(i); }
+    return out;
+  };
+  const linhas: string[] = [];
+  const fechar = (bloco: ItemPdf[]) => {
+    const c = [0, 1, 2, 3].map(k => visuais(bloco.filter(i => col(i) === k)));
+    if (c[0].length > 1) linhas.push(c[0].slice(0, -1).join(' '), c[0].at(-1)!); // nome quebrado em 2 linhas + grupo
+    else linhas.push(...c[0]);
+    if (c[1].length) linhas.push(c[1].join(' '));
+    const nota = c[2].join(' ');
+    if (nota) linhas.push(nota.startsWith('/') ? '- ' + nota : nota); // sem nota lançada = pendente
+    if (c[3].length) linhas.push(c[3].join(' '));
+  };
+  let bloco: ItemPdf[] = [];
+  for (const i of [...vis].sort((a, b) => y(b) - y(a) || x(a) - x(b))) {
+    if (bloco.length && y(bloco[bloco.length - 1]) - y(i) > 20) { fechar(bloco); bloco = []; }
+    bloco.push(i);
+  }
+  if (bloco.length) fechar(bloco);
+  return linhas.join('\n');
+}
 
 async function ocr(imgs: (File | HTMLCanvasElement)[], prog: Prog) {
   await script('https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js');
@@ -38,10 +74,9 @@ export async function lerArquivo(file: File, prog: Prog): Promise<string> {
     try {
     let txt = '';
     for (let p = 1; p <= pdf.numPages; p++) {
-      const itens: { str: string; hasEOL: boolean }[] = (await (await pdf.getPage(p)).getTextContent()).items;
-      txt += itens.map(x => x.str + (x.hasEOL ? '\n' : ' ')).join('') + '\n';
+      txt += textoDaPagina((await (await pdf.getPage(p)).getTextContent()).items) + '\n';
     }
-    if (/G[12]\s*[-–]|G[12]\s+(?:N\/A|[\d.,]+\s*%)|WebAluno|Avaliações Parciais|Situação\s+Freq/i.test(txt)) return txt;
+    if (/Notas para|G[12]\s*[-–]|G[12]\s+(?:N\/A|[\d.,]+\s*%)|WebAluno|Avaliações Parciais|Situação\s+Freq/i.test(txt)) return txt;
     // PDF "impresso" (Microsoft Print to PDF) não tem texto: vira imagem e passa no OCR
     const imgs: HTMLCanvasElement[] = [];
     for (let p = 1; p <= pdf.numPages; p++) {

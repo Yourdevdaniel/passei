@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from 'vitest';
 import { parseImportacao, aplicarImportacao, materiaDoBoletim, notaDoBoletim } from './importacao';
+import { textoDaPagina } from './importar';
 import { normalizar, novaDisc, resumoCurto } from './store';
 import { avaliar, calcGrau, type Db } from './logic';
 
@@ -262,4 +263,16 @@ test('exame pendente limpa exame antigo e exame zero permanece confirmado', () =
   db = aplicarImportacao(db, parseImportacao('WebAluno Notas\nCALCULO 7 4,6 5,4 0 1,8 REP 100'));
   expect(db.lista[0].ef).toBe('0');
   expect(avaliar(db.lista[0]).mf).toBeCloseTo(1.8);
+});
+
+test('PDF do "Imprimir notas" do Canvas lê as notas como a página copiada', () => {
+  const paginas = JSON.parse(readFileSync(new URL('./fixtures/canvas-banco-pdf.json', import.meta.url), 'utf8'));
+  const p = parseImportacao(paginas.map(textoDaPagina).join('\n'));
+  expect(p.materias[0].curso).toBe('25595 - BANCO DE DADOS AVANÇADO');
+  const itens = p.materias[0].g1!.itens.map(i => [i.nome, i.nota, i.max]);
+  expect(itens).toContainEqual(['Trabalho 01', '1', '1']);
+  expect(itens).toContainEqual(['Atividade Avaliativa 01', '', '1,5']);
+  expect(itens).toContainEqual(['G1', '4,6', '6']);
+  const r = avaliar({ ...novaDisc('Banco', '2026/2'), g1: p.materias[0].g1!, g2: p.materias[0].g2! });
+  expect(r.g1.known).toBeCloseTo(5.6);
 });
