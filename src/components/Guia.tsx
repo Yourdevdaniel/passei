@@ -3,7 +3,7 @@
 import { useId, useState, type ReactNode } from 'react';
 import { Seg } from './ui';
 
-type Aba = 'pdf' | 'copiar' | 'celular';
+type Aba = 'pdf' | 'copiar' | 'tudo' | 'celular';
 const MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent);
 const TOQUE = typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
 const CTRL = MAC ? '⌘ Cmd' : 'Ctrl';
@@ -27,8 +27,31 @@ function Pagina({ selecao, children }: { selecao?: boolean; children?: ReactNode
   </div>;
 }
 
+// Página do WebAluno: uma tabela com todas as matérias
+function WebAluno({ titulo, selecao, linhas }: { titulo: string; selecao?: boolean; linhas: string[][] }) {
+  return <div className={'g-page g-web' + (selecao ? ' g-select' : '')}>
+    <div className="g-bar"><i /><i /><i /><span>webaluno.ulbra.br</span></div>
+    <div className="g-grades">
+      <b>{titulo}</b>
+      {linhas.map(l => <div className="g-row" key={l[0]}>{l.map((c, i) => <span key={i}>{c}</span>)}</div>)}
+    </div>
+  </div>;
+}
+const BOLETIM = [['Disciplina', 'G1', 'G2', 'Média'], ['Banco de Dados', '7,0', '–', '–'], ['Front-end', '6,5', '–', '–'], ['PI em TI', '8,2', '–', '–']];
+const PARCIAIS = [['Banco de Dados (1º corte)', 'Peso', 'Nota'], ['Trabalho 01', '1', '1'], ['Prova G1', '6', '4,6']];
+// Caixa de texto do Passei recebendo as páginas, uma embaixo da outra
+const Caixa = ({ blocos, novo }: { blocos: string[]; novo: number }) => <div className="g-textarea g-blocos">
+  {blocos.map((b, i) => <span key={b} className={'g-bloco' + (i === novo ? ' g-bloco-novo' : '')}>{b}</span>)}
+</div>;
+
 const CENAS: Record<string, ReactNode> = {
   notas: <Pagina />,
+  webNotas: <div className="g-stack"><WebAluno titulo="Notas" selecao linhas={BOLETIM} /><Atalho letra="A" /></div>,
+  colar1: <div className="g-stack"><Caixa blocos={['WebAluno · Notas']} novo={0} /><Atalho letra="V" /></div>,
+  webParciais: <div className="g-stack"><WebAluno titulo="Avaliações parciais" selecao linhas={PARCIAIS} /><Atalho letra="C" /></div>,
+  colar2: <div className="g-stack"><Caixa blocos={['WebAluno · Notas', 'WebAluno · Avaliações parciais']} novo={1} /><Atalho letra="V" /></div>,
+  colar3: <div className="g-stack"><Caixa blocos={['WebAluno · Notas', 'WebAluno · Avaliações parciais', 'AULA · Notas de Banco de Dados']} novo={2} /><Atalho letra="V" /></div>,
+  importarTudo: <div className="g-final"><Caixa blocos={['WebAluno · Notas', 'WebAluno · Avaliações parciais', 'AULA · Notas de Banco de Dados']} novo={-1} /><span className="g-btn-peach g-pulse">Importar texto</span></div>,
   imprimir: <div className="g-stage"><Pagina><span className="g-print g-pulse"><Impressora />Imprimir notas</span></Pagina><span className="g-cursor g-cursor-print" /></div>,
   salvar: <div className="g-dialog">
     <b>Imprimir</b>
@@ -62,7 +85,18 @@ const PASSOS: Record<Aba, { intro: string; passos: Passo[] }> = {
       { cena: 'notas', t: <>Abra a página com as suas notas</>, p: 'No AULA, a página Notas da disciplina. No WebAluno, Notas ou Avaliações parciais.' },
       { cena: 'ctrlA', t: <>Aperte <b>{CTRL} + A</b> para selecionar tudo</>, p: `Segure a tecla ${CTRL} e aperte A. A página inteira fica azul: é isso mesmo, o azul mostra o que foi selecionado.` },
       { cena: 'ctrlC', t: <>Aperte <b>{CTRL} + C</b> para copiar</>, p: 'Nada muda na tela, mas o texto já está guardado para colar.' },
-      { cena: 'ctrlV', t: <>Volte aqui, clique na caixa de texto e aperte <b>{CTRL} + V</b></>, p: 'O texto aparece na caixa. Depois clique em Importar texto. Pode colar várias páginas, uma depois da outra.' },
+      { cena: 'ctrlV', t: <>Volte aqui, clique na caixa de texto e aperte <b>{CTRL} + V</b></>, p: 'O texto aparece na caixa. Depois clique em Importar texto. Para juntar várias páginas, veja a aba Tudo junto.' },
+    ],
+  },
+  tudo: {
+    intro: 'Junte várias páginas na mesma caixa e importe uma vez só. O WebAluno traz todas as matérias de uma vez.',
+    passos: [
+      { cena: 'webNotas', t: <>No WebAluno, abra <b>Notas</b> e copie tudo</>, p: `${CTRL} + A para selecionar (a página fica azul) e ${CTRL} + C para copiar. No celular: segure o dedo, Selecionar tudo e Copiar.` },
+      { cena: 'colar1', t: <>Volte aqui e cole na caixa de texto</>, p: `Clique na caixa e aperte ${CTRL} + V. Não clique em Importar ainda.` },
+      { cena: 'webParciais', t: <>Agora abra <b>Avaliações parciais</b> e copie tudo do mesmo jeito</>, p: 'É essa página que mostra cada trabalho e prova do 1º e do 2º corte.' },
+      { cena: 'colar2', t: <>Cole <b>embaixo</b> do que já está na caixa</>, p: `Clique no fim do texto, aperte Enter para pular uma linha e depois ${CTRL} + V. O texto de antes continua lá.` },
+      { cena: 'colar3', t: <>Se quiser, junte também uma disciplina do AULA</>, p: 'Copie a página Notas dela e cole embaixo. Só uma disciplina do AULA por vez: para as outras, importe depois ou use o PDF.' },
+      { cena: 'importarTudo', t: <>Clique em <b>Importar texto</b></>, p: 'Deixe Página de origem em Identificar automaticamente. O Passei separa cada página sozinho, em qualquer ordem.' },
     ],
   },
   celular: {
@@ -83,7 +117,7 @@ export function Guia({ voltar }: { voltar: () => void }) {
     <button className="link guia-back" onClick={voltar}>← Voltar para importar</button>
     <h3>Como trazer suas notas</h3>
     <p className="hint">Escolha um jeito. Leva menos de um minuto por matéria.</p>
-    <div className="guia-tabs"><Seg small label="Jeito de importar" value={aba} onChange={setAba} options={[['pdf', 'PDF'], ['copiar', 'Copiar e colar'], ['celular', 'Celular']]} /></div>
+    <div className="guia-tabs"><Seg small label="Jeito de importar" value={aba} onChange={setAba} options={[['pdf', 'PDF'], ['copiar', 'Copiar'], ['tudo', 'Tudo junto'], ['celular', 'Celular']]} /></div>
     <div role="tabpanel" aria-labelledby={id} key={aba}>
       <p className="guia-intro" id={id}>{atual.intro}</p>
       <ol className="guia-passos">

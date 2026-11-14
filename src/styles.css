@@ -662,6 +662,7 @@ footer{text-align:center;color:var(--mut);font-size:13px;margin-top:40px}
 .guia-back{font-size:14px;padding:4px 0}
 .guia-tabs{margin:14px 0 4px;overflow-x:auto}
 .guia-tabs .seg button{white-space:nowrap;padding:9px 16px}
+@media (max-width:420px){.guia-tabs .seg button{padding:8px 11px;font-size:13.5px}}
 .guia-intro{margin:12px 0 4px;color:var(--mut);font-size:14px}
 .guia-passos{list-style:none;margin:0;padding:0;display:grid;gap:14px}
 .guia-passo{display:grid;grid-template-columns:230px 1fr;gap:16px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:16px;background:var(--card);animation:guia-in .3s ease-out backwards}
@@ -744,3 +745,17 @@ footer{text-align:center;color:var(--mut);font-size:13px;margin-top:40px}
   .g-cursor-print{transform:translate(60px,-28px)}
   .g-file{transform:translateY(38px)}
 }
+/* aba "Tudo junto": WebAluno e a caixa recebendo páginas empilhadas */
+.g-web .g-bar span{color:#1d6b3f}
+.g-web .g-grades>b{color:#1d6b3f}
+.g-web .g-row{gap:6px}
+.g-web .g-row span{flex:0 0 26px;text-align:right}
+.g-web .g-row span:first-child{flex:1;text-align:left}
+.g-web .g-row:nth-child(2){font-weight:700;color:#5b6470}
+.g-blocos{display:flex;flex-direction:column;gap:4px;height:auto;min-height:74px}
+.g-bloco{display:block;padding:4px 7px;border-radius:5px;background:#f0eff9;border:1px solid #dcd9f5;font:600 8.5px Outfit,system-ui,sans-serif;color:#2d2a5e}
+.g-bloco-novo{animation:g-bloco 2.8s ease-out infinite}
+@keyframes g-bloco{0%,25%{opacity:0;transform:translateY(-4px)}40%,100%{opacity:1;transform:none}}
+.g-final{display:grid;justify-items:end;gap:8px}
+.g-btn-peach{padding:6px 14px;border-radius:99px;background:#f2b48a;color:#15123a;font:700 10px Outfit,system-ui,sans-serif}
+@media (prefers-reduced-motion:reduce){.g-bloco-novo{opacity:1}}
