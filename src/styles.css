@@ -585,10 +585,25 @@ footer{text-align:center;color:var(--mut);font-size:13px;margin-top:40px}
 .card-tools input:checked::after,.dashboard-select input:checked::after{content:'✓';font-weight:800;color:#15123a;font-size:15px;line-height:1}
 .card-tools button{width:44px;height:44px;border-radius:12px;font-size:24px;color:var(--mut)}
 .card-tools button:hover{background:var(--soft);color:var(--ink)}
-.discipline-menu{position:fixed;inset:auto;margin:0;padding:6px;width:240px;max-width:calc(100vw - 16px);background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.discipline-menu{position:fixed;inset:auto;margin:0;overflow:visible;padding:6px;width:240px;max-width:calc(100vw - 16px);background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
 .discipline-menu button{display:block;width:100%;min-height:48px;text-align:left;padding:10px 14px;border-radius:10px}
 .discipline-menu button:hover,.discipline-menu button:focus-visible{background:var(--soft)}
 .discipline-menu .menu-danger{color:var(--bad-ink)}
+/* Bolha: o menu cresce a partir do cursor e os itens entram pulando, um atrás do outro. */
+.discipline-menu:popover-open{transform-origin:top left;animation:menu-bolha .32s cubic-bezier(.34,1.56,.64,1) both}
+.discipline-menu:popover-open button{animation:menu-item-pulo .55s ease-out both;animation-delay:.06s}
+.discipline-menu:popover-open button:nth-child(2){animation-delay:.12s}
+.discipline-menu:popover-open button:nth-child(3){animation-delay:.18s}
+@keyframes menu-bolha{from{opacity:0;transform:scale(.6);border-radius:28px}to{opacity:1;transform:scale(1);border-radius:16px}}
+/* Pulo: sobe de baixo, passa do ponto, quica duas vezes e assenta. */
+@keyframes menu-item-pulo{
+  0%{opacity:0;transform:translateY(14px) scale(.7)}
+  40%{opacity:1;transform:translateY(-7px) scale(1.05)}
+  62%{transform:translateY(2px) scale(.98)}
+  80%{transform:translateY(-2px)}
+  100%{opacity:1;transform:none}
+}
+@media (prefers-reduced-motion:reduce){.discipline-menu:popover-open,.discipline-menu:popover-open button{animation:none}}
 .modal,.drawer,.side-list{scrollbar-width:thin;scrollbar-color:var(--lav) var(--soft)}
 .modal::-webkit-scrollbar,.drawer::-webkit-scrollbar{width:8px}
 .modal::-webkit-scrollbar-track,.drawer::-webkit-scrollbar-track{background:var(--soft);border-radius:99px}
