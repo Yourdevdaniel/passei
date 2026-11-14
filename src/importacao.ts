@@ -40,7 +40,9 @@ export function parseImportacao(txt: string, fonte?: Fonte): Importacao {
       if (!itens.length) continue;
       let materia = out.materias.find(p => chave(p.curso!) === chave(m[1]));
       if (!materia) { materia = { curso: m[1].trim(), avisos: [], webAluno: {} }; out.materias.push(materia); }
-      materia.webAluno![m[2] === '1' ? 'g1' : 'g2'] = itens;
+      const k = m[2] === '1' ? 'g1' : 'g2';
+      materia.webAluno![k] = itens;
+      materia[k] = { modo: 'lista', trabMax: '0', trab: '', prova: '', extra: '', itens: itens.map((n, j) => ({ id: `web-${k}-${j}`, nome: n.nome, tipo: 'prova', nota: n.nota, max: n.peso, data: '' })) };
     }
   } else {
     out.boletim = [];
@@ -71,7 +73,16 @@ export function aplicarImportacao(db: Db, p: Importacao): Db {
   }
   const lista = db.lista.slice();
   let cur = db.cur;
-  const doBoletim = (p.boletim ?? []).filter(n => lista.some(d => d.semestre === db.semestre && chave(d.nome) === chave(n.nome)) || p.materias.some(m => m.curso && chave(m.curso) === chave(n.nome))).map(materiaDoBoletim);
+  const doBoletim = (p.boletim ?? []).map(n => {
+    const m = materiaDoBoletim(n);
+    const parcial = p.materias.find(x => x.webAluno && x.curso && chave(x.curso) === chave(n.nome));
+    const existente = lista.find(d => d.semestre === db.semestre && chave(d.nome) === chave(n.nome));
+    for (const k of ['g1', 'g2'] as const) if (!n[k]) {
+      if (parcial?.[k]) m[k] = parcial[k];
+      else if (existente?.webAluno?.[k]) m[k] = { modo: 'lista', trabMax: '0', trab: '', prova: '', extra: '', itens: existente.webAluno[k]!.map((x, j) => ({ id: `web-${k}-${j}`, nome: x.nome, tipo: 'prova', nota: x.nota, max: x.peso, data: '' })) };
+    }
+    return m;
+  });
   // No lote misto, as notas oficiais do boletim prevalecem sobre os totais do AULA.
   for (const materia of [...p.materias, ...doBoletim]) {
     const nome = materia.curso ? nomeBonito(materia.curso) : '';
@@ -86,5 +97,7 @@ export function aplicarImportacao(db: Db, p: Importacao): Db {
     if (materia.webAluno) alvo.webAluno = { ...alvo.webAluno, ...materia.webAluno };
     lista[i] = alvo; cur = i;
   }
+  const primeira = p.boletim?.find(n => n.g1 || n.g2)?.nome ?? p.materias.find(m => m.webAluno && Object.values(m.webAluno).some(itens => itens?.some(n => n.nota !== '')))?.curso;
+  if (primeira) { const i = lista.findIndex(d => d.semestre === db.semestre && chave(d.nome) === chave(primeira)); if (i >= 0) cur = i; }
   return { ...db, lista, cur, boletim };
 }

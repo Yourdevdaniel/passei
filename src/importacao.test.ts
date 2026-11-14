@@ -17,7 +17,7 @@ LÓGICA 0,0 6,0 4,0 - 4,0 REP 80,00`);
   expect(p.boletim?.[3].g1).toBe('0,0');
 });
 
-test('ambos os cortes se juntam por matéria sem substituir as avaliações do AULA', () => {
+test('ambos os cortes se juntam por matéria e alimentam os graus', () => {
   const base = { cur: 0, lista: [novaDisc('Paradigmas de Linguagens de Programação', '2026/2')], semestre: '2026/2', valorCredito: '' };
   base.lista[0].g1.trab = '3';
   const p = parseImportacao(`WebAluno Avaliações Parciais
@@ -35,16 +35,18 @@ G2 10.0 -
 MÉDIA PARCIAL -`);
   const db = aplicarImportacao(base, p);
   expect(db.lista).toHaveLength(2);
-  expect(db.lista[0].g1.trab).toBe('3');
+  expect(calcGrau(db.lista[0].g1).v).toBe(7.5);
   expect(db.lista[0].webAluno?.g1).toEqual([{ nome: 'G1', peso: '10', nota: '7,5' }]);
   expect(db.lista[0].webAluno?.g2?.[0].nota).toBe('');
   expect(aplicarImportacao(db, p).lista).toHaveLength(2);
 });
 
-test('boletim não entra na lista de matérias do semestre atual', () => {
+test('boletim cria disciplinas no semestre selecionado', () => {
   const base = { cur: 0, lista: [novaDisc('Minha disciplina', '2026/2')], semestre: '2026/2', valorCredito: '' };
   const db = aplicarImportacao(base, parseImportacao('WebAluno Notas\nHISTÓRIA 9,5 - 9,5 - 9,5 APR 100,00'));
-  expect(db.lista).toEqual(base.lista);
+  expect(db.lista).toHaveLength(1);
+  expect(calcGrau(db.lista[0].g1).v).toBe(9.5);
+  expect(db.lista[0].semestre).toBe('2026/2');
   expect(db.boletim).toHaveLength(1);
 });
 
@@ -104,8 +106,8 @@ test.each([[0, 1, 2], [2, 0, 1], [1, 2, 0]])('colar as três páginas em qualque
   const p = parseImportacao(txt);
   expect(p.fonte).toBe('misto');
   const db = aplicarImportacao({ cur: 0, lista: [novaDisc('Minha disciplina', '2026/2')], semestre: '2026/2', valorCredito: '' }, p);
-  expect(db.lista).toHaveLength(1);
-  expect(calcGrau(db.lista[0].g1).v).toBeNull();
+  expect(db.lista).toHaveLength(2);
+  expect(calcGrau(db.lista[0].g1).v).toBe(9);
   expect(calcGrau(db.lista[0].g2).v).toBeNull();
   expect(db.lista[0].webAluno?.g1).toEqual([{ nome: 'G1', peso: '10', nota: '9' }]);
   expect(db.lista[0].webAluno?.g2).toEqual([{ nome: 'G2', peso: '10', nota: '' }]);
@@ -217,4 +219,24 @@ test('boletim prevalece sobre AULA de materia criada no mesmo lote misto', () =>
   const db = aplicarImportacao({ cur: 0, lista: [novaDisc('Outra', '2026/2')], semestre: '2026/2', valorCredito: '' }, p);
   expect(calcGrau(db.lista[1].g1).v).toBe(7.2);
   expect(calcGrau(db.lista[1].g2).v).toBe(9.2);
+});
+
+
+test('parciais com quebra entre os cortes alimentam G1 de requisitos sem confundir peso e nota', () => {
+  const txt = 'WebAluno Avaliações Parciais\n1° Corte 2° Corte\nENGENHARIA DE REQUISITOS E MODELAGEM DE SOFTWARE ( 1º corte )\nAvaliação Peso Nota\nG1\t10.0\t9.0\nMÉDIA PARCIAL -\nPI EM TI I ( 1º corte )\nWebAluno Avaliações Parciais\nENGENHARIA DE REQUISITOS E MODELAGEM DE SOFTWARE ( 2º corte )\nAvaliação Peso Nota\nG2 10.0 -\nMÉDIA PARCIAL -';
+  const p = parseImportacao(txt);
+  const db = aplicarImportacao({ cur: 0, lista: [novaDisc('Minha disciplina', '2026/2')], semestre: '2026/2', valorCredito: '' }, p);
+  expect(db.lista[0].nome).toContain('Requisitos');
+  expect(calcGrau(db.lista[0].g1).v).toBe(9);
+  expect(calcGrau(db.lista[0].g2).v).toBeNull();
+  expect(db.lista[0].webAluno?.g1?.[0]).toMatchObject({ peso: '10', nota: '9' });
+});
+
+
+test('boletim ainda vazio preserva uma parcial publicada anteriormente', () => {
+  const d = novaDisc('Requisitos', '2026/2');
+  d.webAluno = { g1: [{ nome: 'G1', peso: '10', nota: '9' }] };
+  const db = aplicarImportacao({ cur: 0, lista: [d], semestre: '2026/2', valorCredito: '' }, parseImportacao('WebAluno Notas\nREQUISITOS - - - - - - 100'));
+  expect(calcGrau(db.lista[0].g1).v).toBe(9);
+  expect(calcGrau(db.lista[0].g2).v).toBeNull();
 });
