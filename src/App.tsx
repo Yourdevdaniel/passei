@@ -8,6 +8,7 @@ import { Ic, RM, Toast, Seg, useAnim } from './components/ui';
 import { Grau, Resultado, Simulador, Trilha } from './components/Disciplina';
 import { CreditosView, PainelView } from './components/Telas';
 import { Ajustes, Importar } from './components/Dialogos';
+import { jaViuTour, marcarTour, Onboarding } from './components/Onboarding';
 
 type Tela = 'painel' | 'creditos' | 'disc';
 type Aba = 'notas' | 'sim';
@@ -21,6 +22,8 @@ export default function App() {
   const [prog, setProg] = useState<{ p: number; msg: string } | null>(null);
   const [toast, setToast] = useState<{ msg: string; err?: boolean } | null>(null);
   const [arrastando, setArrastando] = useState(false);
+  const [tour, setTour] = useState(() => !jaViuTour()); // abre sozinho só na primeira visita
+  const fecharTour = () => { marcarTour(); setTour(false); };
   const toastT = useRef(0);
   const d = db.lista[db.cur];
   const r = avaliar(d);
@@ -151,6 +154,7 @@ export default function App() {
       </nav>
       <div className="side-foot anim-top">
         <button className="btn peach" onClick={() => setImp(true)}>{Ic.up} Importar</button>
+        <button className="btn glass" onClick={() => setTour(true)}>Como funciona</button>
         <small>Salvo só neste navegador.<br />Projeto de aluno, sem vínculo oficial com a ULBRA.</small>
       </div>
     </aside>
@@ -193,6 +197,7 @@ export default function App() {
 
     <Ajustes open={ajustes} onClose={() => setAjustes(false)} d={d} set={set} apagar={apagar} exportar={exportar} restaurar={restaurar} />
     <Importar open={imp} onClose={() => { if (!prog) setImp(false); }} onArquivo={importarArquivo} onTexto={importarTexto} prog={prog} />
+    <Onboarding open={tour} onClose={fecharTour} importar={() => { fecharTour(); setImp(true); }} />
     {arrastando && <div className="dragzone">Solte para importar</div>}
     <Toast t={toast} />
   </div>;

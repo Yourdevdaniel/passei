@@ -333,3 +333,17 @@ footer{text-align:center;color:var(--mut);font-size:13px;margin-top:40px}
   .ag.cr.cr-h{display:none}
 }
 .passo .slot{width:110px;margin:-6px 0 12px}
+
+/* apresentação de primeira visita */
+.tour{position:relative;text-align:center}
+.tour-x{position:absolute;top:-10px;right:-10px}
+.tour-img{height:190px;display:grid;place-items:center;margin-bottom:6px}
+.tour-img .slot{height:190px;width:auto}
+.tour-corpo small{display:block;color:var(--mut);font-weight:600;font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.tour-corpo h3{font-size:24px;letter-spacing:-.02em;margin:6px 0 8px}
+.tour-corpo p{margin:0 auto;color:var(--mut);max-width:42ch;min-height:4.5em;font-size:15.5px}
+.tour-dots{display:flex;justify-content:center;gap:8px;margin:18px 0}
+.tour-dots button{width:9px;height:9px;border-radius:99px;background:var(--line);transition:width .3s,background .3s}
+.tour-dots button.on{width:26px;background:var(--lav)}
+.tour-act{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}
+@media (max-width:900px){.side-foot .btn.glass{display:none}}
