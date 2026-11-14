@@ -636,3 +636,11 @@ footer{text-align:center;color:var(--mut);font-size:13px;margin-top:40px}
   .side-foot{grid-row:1}
 }
 @media(max-width:360px){.sem{grid-template-columns:minmax(0,1fr) 44px}}
+
+.official-grades{padding:20px 24px;margin:20px 0}
+.official-grades h3{font-size:16px;margin:0 0 16px}
+.official-grades dl{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin:0}
+.official-grades dt{font-size:12px;color:var(--mut)}
+.official-grades dd{font-size:24px;font-weight:700;margin:4px 0 0;font-variant-numeric:tabular-nums}
+.official-grades .hint{margin:14px 0 0}
+@media(max-width:600px){.official-grades{padding:18px}.official-grades dl{grid-template-columns:repeat(2,minmax(0,1fr))}}

@@ -28,3 +28,14 @@ export function BoletimWeb({ notas, usar, usarTodas }: { notas?: NotaWeb[]; usar
     </div>
   </section>;
 }
+
+
+export function ResumoBoletim({ nota }: { nota?: NotaWeb }) {
+  if (!nota) return null;
+  const campos = [['Média parcial', nota.media], ['Exame', nota.exame], ['Média final', nota.final], ['Situação', nota.situacao]];
+  return <section className="card official-grades" aria-label="Resultado publicado no WebAluno">
+    <h3>Resultado no WebAluno</h3>
+    <dl>{campos.map(([titulo, valor]) => <div key={titulo}><dt>{titulo}</dt><dd>{valor || 'Pendente'}</dd></div>)}</dl>
+    <p className="hint">Valores publicados no boletim. Os cálculos abaixo usam as notas salvas.</p>
+  </section>;
+}

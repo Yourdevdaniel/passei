@@ -2,7 +2,7 @@ import { fmt, num, parseCanvas, type Db, type Importado, type NotaWeb, type Parc
 import { nomeBonito, novaDisc } from './store';
 
 export type Fonte = 'aula' | 'web-notas' | 'web-parciais' | 'misto';
-interface Materia extends Importado { webAluno?: Partial<Record<'g1' | 'g2', ParcialWeb[]>> }
+interface Materia extends Importado { ef?: string; webAluno?: Partial<Record<'g1' | 'g2', ParcialWeb[]>> }
 export interface Importacao { fonte: Fonte; materias: Materia[]; boletim?: NotaWeb[]; avisos: string[] }
 const chave = (s: string) => nomeBonito(s).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
 
@@ -61,7 +61,7 @@ export function parseImportacao(txt: string, fonte?: Fonte): Importacao {
 
 export function materiaDoBoletim(nota: NotaWeb): Materia {
   const grau = (nota: string) => ({ modo: 'simples' as const, trabMax: '0', trab: '', prova: nota, extra: '', itens: [] });
-  return { curso: nota.nome, g1: grau(nota.g1), g2: grau(nota.g2), avisos: [] };
+  return { curso: nota.nome, g1: grau(nota.g1), g2: grau(nota.g2), ef: nota.exame, avisos: [] };
 }
 
 export function aplicarImportacao(db: Db, p: Importacao): Db {
@@ -93,6 +93,7 @@ export function aplicarImportacao(db: Db, p: Importacao): Db {
     if (nome) alvo.nome = nome;
     if (materia.g1) alvo.g1 = materia.g1;
     if (materia.g2) alvo.g2 = materia.g2;
+    if (materia.ef !== undefined) alvo.ef = materia.ef;
     if (materia.sub !== undefined) alvo.sub = materia.sub;
     if (materia.webAluno) alvo.webAluno = { ...alvo.webAluno, ...materia.webAluno };
     lista[i] = alvo; cur = i;
@@ -101,3 +102,5 @@ export function aplicarImportacao(db: Db, p: Importacao): Db {
   if (primeira) { const i = lista.findIndex(d => d.semestre === db.semestre && chave(d.nome) === chave(primeira)); if (i >= 0) cur = i; }
   return { ...db, lista, cur, boletim };
 }
+
+export const notaDoBoletim = (notas: NotaWeb[] | undefined, nome: string) => notas?.find(n => chave(n.nome) === chave(nome));

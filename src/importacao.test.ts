@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from 'vitest';
-import { parseImportacao, aplicarImportacao, materiaDoBoletim } from './importacao';
+import { parseImportacao, aplicarImportacao, materiaDoBoletim, notaDoBoletim } from './importacao';
 import { normalizar, novaDisc, resumoCurto } from './store';
 import { avaliar, calcGrau, type Db } from './logic';
 
@@ -239,4 +239,27 @@ test('boletim ainda vazio preserva uma parcial publicada anteriormente', () => {
   const db = aplicarImportacao({ cur: 0, lista: [d], semestre: '2026/2', valorCredito: '' }, parseImportacao('WebAluno Notas\nREQUISITOS - - - - - - 100'));
   expect(calcGrau(db.lista[0].g1).v).toBe(9);
   expect(calcGrau(db.lista[0].g2).v).toBeNull();
+});
+
+
+test('boletim preenche exame e preserva medias publicadas de Calculo', () => {
+  const p = parseImportacao('WebAluno Notas\nFUNDAMENTOS DE CÁLCULO 7,0 4,6 5,4 6,3 6,0 APR 100,00');
+  const db = aplicarImportacao({ cur: 0, lista: [novaDisc('Minha disciplina', '2026/2')], semestre: '2026/2', valorCredito: '' }, p);
+  const d = db.lista[0], r = avaliar(d);
+  expect(d.ef).toBe('6,3');
+  expect(r.mp).toBeCloseTo(5.4);
+  expect(r.mf).toBeCloseTo(6);
+  expect(r.status).toBe('aprovado-exame');
+  expect(notaDoBoletim(db.boletim, d.nome)).toMatchObject({ media: '5,4', exame: '6,3', final: '6,0' });
+  expect(materiaDoBoletim(p.boletim![0]).ef).toBe('6,3');
+});
+
+test('exame pendente limpa exame antigo e exame zero permanece confirmado', () => {
+  let db = { cur: 0, lista: [novaDisc('Calculo', '2026/2')], semestre: '2026/2', valorCredito: '' };
+  db.lista[0].ef = '9';
+  db = aplicarImportacao(db, parseImportacao('WebAluno Notas\nCALCULO 7 4,6 5,4 - 5,4 REP 100'));
+  expect(db.lista[0].ef).toBe('');
+  db = aplicarImportacao(db, parseImportacao('WebAluno Notas\nCALCULO 7 4,6 5,4 0 1,8 REP 100'));
+  expect(db.lista[0].ef).toBe('0');
+  expect(avaliar(db.lista[0]).mf).toBeCloseTo(1.8);
 });

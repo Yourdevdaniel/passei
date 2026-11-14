@@ -3,9 +3,9 @@ import gsap from 'gsap';
 import Lenis from 'lenis';
 import { avaliar, fmt, type Db, type Disc, type Grau as TGrau } from './logic';
 import { carregar, doSemestre, lerBackup, novaDisc, proximoSemestre, resetarDisciplina, salvar, semestres } from './store';
-import { aplicarImportacao, materiaDoBoletim, parseImportacao, type Fonte, type Importacao } from './importacao';
+import { aplicarImportacao, materiaDoBoletim, notaDoBoletim, parseImportacao, type Fonte, type Importacao } from './importacao';
 import { adicionarDisciplinaTeste } from './exemplo';
-import { BoletimWeb, ParciaisWeb } from './components/WebAluno';
+import { BoletimWeb, ParciaisWeb, ResumoBoletim } from './components/WebAluno';
 import { lerArquivo } from './importar';
 import { Ic, RM, Toast, Seg, useAnim } from './components/ui';
 import { Grau, Resultado, Simulador, Trilha } from './components/Disciplina';
@@ -230,6 +230,7 @@ export default function App() {
               <button className="btn line" onClick={() => setAjustes(true)}>{Ic.gear} Ajustes</button>
             </div>
           </div>
+          <ResumoBoletim nota={notaDoBoletim(db.boletim, d.nome)} />
           <ParciaisWeb notas={d.webAluno} />
           {d.webAluno && <div className="sec-h"><h2>Notas e simulação</h2><span>Avaliações e notas importadas</span></div>}
           <Trilha r={r} d={d} />

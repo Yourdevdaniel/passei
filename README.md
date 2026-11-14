@@ -80,3 +80,5 @@ Ao importar notas, o Passei abre o simulador de uma matéria com nota publicada.
 O painel abre na **Visão geral**, com tabela de G1, G2, média e situação das disciplinas de todos os semestres, identificadas por período. O filtro **Período** permite restringir ao semestre selecionado no menu. A aba **Cartões** preserva a visualização anterior. Notas pendentes não viram zero; a tabela mostra dados salvos, sem alterações temporárias do simulador. No celular, deslize a tabela para ver as demais colunas.
 
 Trocar o semestre pelo menu lateral também restringe o dashboard ao período escolhido. Para voltar ao histórico completo, selecione **Todos os semestres** no filtro **Período**. No celular, o seletor lateral ocupa uma linha inteira para manter o campo e o botão de adicionar acessíveis.
+
+O boletim também preenche a nota do exame. Dentro da disciplina, **Resultado no WebAluno** mostra média parcial, exame, média final e situação publicadas pelo portal, preservando seus valores. O cálculo do Passei continua derivado das notas salvas; reimporte boletins antigos para preencher o exame.
