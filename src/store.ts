@@ -95,8 +95,8 @@ export function resumoCurto(r: Aval): Resumo {
 
 export interface Linha { d: Disc; i: number; r: Aval; c: Resumo }
 // Disciplinas de um semestre, com o índice na lista completa
-export const doSemestre = (db: Db): Linha[] =>
-  db.lista.map((d, i) => { const r = avaliar(d); return { d, i, r, c: resumoCurto(r) }; }).filter(x => x.d.semestre === db.semestre);
+export const doSemestre = (db: Db, todos = false): Linha[] =>
+  db.lista.map((d, i) => { const r = avaliar(d); return { d, i, r, c: resumoCurto(r) }; }).filter(x => todos || x.d.semestre === db.semestre);
 export const semestres = (db: Db) => [...new Set([...db.lista.map(d => d.semestre), db.semestre])].sort();
 
 // "25078 - INTRODUÇÃO À CIÊNCIA DA COMPUTAÇÃO" → "Introdução à Ciência da Computação"

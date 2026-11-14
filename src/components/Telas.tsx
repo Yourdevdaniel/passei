@@ -9,10 +9,11 @@ interface Nav { abrir: (i: number) => void; nova: () => void }
 
 // ---------- painel (tela inicial) ----------
 export function PainelView({ db, abrir, nova, importar, exportar, testar, remover, resetarTudo }: Nav & { db: Db; importar: () => void; exportar: () => void; testar: () => void; remover: (ids: string[]) => void; resetarTudo: () => void }) {
+  const [todos, setTodos] = useState(true);
   const [visualizacao, setVisualizacao] = useState<'notas' | 'cartoes'>('notas');
   const [selecionadas, selecionar] = useState<string[]>([]);
   const [menu, setMenu] = useState<{ i: number; x: number; y: number } | null>(null);
-  const rs = doSemestre(db);
+  const rs = doSemestre(db, todos);
   const comNota = rs.filter(x => x.r.status !== 'vazio' || x.r.g1.known + x.r.g1.e + x.r.g2.known + x.r.g2.e > 0);
   const medias = rs.filter(x => x.r.mp != null).map(x => x.r.mf ?? x.r.mp!);
   const hoje = new Date().toISOString().slice(0, 10);
@@ -44,20 +45,21 @@ export function PainelView({ db, abrir, nova, importar, exportar, testar, remove
         <div className="card passo anim-in"><Img name="passo3" /><i>3</i><h3>Simule</h3><p>Teste notas da G1 e veja o que sobra para a prova da G2.</p></div>
       </div>
     </div> : <div className="stats">
-      <div className="card stat anim-in"><small>Disciplinas em {db.semestre}</small><b>{rs.length}</b></div>
+      <div className="card stat anim-in"><small>{todos ? 'Disciplinas no total' : 'Disciplinas em ' + db.semestre}</small><b>{rs.length}</b></div>
       <div className="card stat ok anim-in"><small>Aprovadas</small><b>{rs.filter(x => x.c.tone === 'ok').length}</b></div>
       <div className="card stat warn anim-in"><small>Pedem atenção</small><b>{rs.filter(x => x.c.tone === 'warn' || x.c.tone === 'bad').length}</b></div>
       <div className="card stat anim-in"><small>Média geral</small><b>{medias.length ? fmt(medias.reduce((a, b) => a + b, 0) / medias.length) : '–'}</b></div>
     </div>}
 
-    <div className="sec-h"><h2>Disciplinas de {db.semestre}</h2><span>clique para abrir</span></div>
-    <div className="dashboard-view"><Seg label="Visualização das disciplinas" value={visualizacao} onChange={setVisualizacao} options={[['notas', 'Visão geral'], ['cartoes', 'Cartões']]} /><p className="hint">Notas salvas. Simulações não alteram este resumo.</p></div>
+    <div className="sec-h"><h2>{todos ? 'Todas as disciplinas' : 'Disciplinas de ' + db.semestre}</h2><span>clique para abrir</span></div>
+    <div className="dashboard-view"><label className="dashboard-scope">Período<select value={todos ? 'todos' : 'atual'} onChange={e => { setTodos(e.target.value === 'todos'); selecionar([]); setMenu(null); }}><option value="todos">Todos os semestres</option><option value="atual">Somente {db.semestre}</option></select></label><Seg label="Visualização das disciplinas" value={visualizacao} onChange={setVisualizacao} options={[['notas', 'Visão geral'], ['cartoes', 'Cartões']]} /><p className="hint">Notas salvas. Simulações não alteram este resumo.</p></div>
     {visualizacao === 'notas' && <section className="card dashboard-grades" aria-label="Visão geral das notas">
       <div className="dashboard-scroll" role="region" aria-label="Notas por disciplina" tabIndex={0}><table>
-        <caption>G1, G2 e resultado de {db.semestre}</caption>
-        <thead><tr><th scope="col">Disciplina</th><th scope="col">G1</th><th scope="col">G2</th><th scope="col">Média</th><th scope="col">Situação</th><th scope="col"><span className="sr-only">Ações</span></th></tr></thead>
+        <caption>{todos ? 'G1, G2 e resultado de todos os semestres' : 'G1, G2 e resultado de ' + db.semestre}</caption>
+        <thead><tr><th scope="col">Disciplina</th>{todos && <th scope="col">Semestre</th>}<th scope="col">G1</th><th scope="col">G2</th><th scope="col">Média</th><th scope="col">Situação</th><th scope="col"><span className="sr-only">Ações</span></th></tr></thead>
         <tbody>{rs.map(({ d, i, r, c }) => <tr key={d.id} onContextMenu={e => { e.preventDefault(); setMenu({ i, x: e.clientX, y: e.clientY }); }}>
           <th scope="row"><label className="dashboard-select"><input type="checkbox" aria-label={'Selecionar ' + d.nome} checked={selecionadas.includes(d.id)} onChange={e => selecionar(e.target.checked ? [...selecionadas, d.id] : selecionadas.filter(id => id !== d.id))} /><span className="sr-only">Selecionar</span></label><button className="dashboard-name" onClick={() => abrir(i)}>{d.nome || 'Sem nome'}</button></th>
+          {todos && <td>{d.semestre}</td>}
           <td>{r.G1 == null ? <span className="grade-pending">Pendente</span> : fmt(r.G1)}</td>
           <td>{r.G2 == null ? <span className="grade-pending">Pendente</span> : fmt(r.G2)}</td>
           <td>{r.mf == null && r.mp == null ? '—' : fmt(r.mf ?? r.mp!)}</td>
@@ -76,7 +78,7 @@ export function PainelView({ db, abrir, nova, importar, exportar, testar, remove
         <p>{c.txt}</p>
         <Ring v={c.v} max={c.max} size={74} stroke={8} tone={c.tone}><strong style={{ fontSize: 18 }}>{c.show || (c.v == null ? '–' : fmt(c.v))}</strong></Ring>
         <div className="mini">
-          <span>G1 <b>{r.G1 == null ? '–' : fmt(r.G1)}</b></span><span>G2 <b>{r.G2 == null ? '–' : fmt(r.G2)}</b></span><span>Média <b>{r.mp == null ? '–' : fmt(r.mp)}</b></span>
+          {todos && <span>{d.semestre}</span>}<span>G1 <b>{r.G1 == null ? '–' : fmt(r.G1)}</b></span><span>G2 <b>{r.G2 == null ? '–' : fmt(r.G2)}</b></span><span>Média <b>{r.mp == null ? '–' : fmt(r.mp)}</b></span>
         </div>
       </button></div>)}
       <button className="card dcard novo anim-in" onClick={nova}>{Ic.plus} Nova disciplina</button>
