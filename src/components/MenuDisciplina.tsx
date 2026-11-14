@@ -8,11 +8,15 @@ export function MenuDisciplina({ x, y, fechar, abrir, nova, remover }: { x: numb
     const el = ref.current!;
     el.style.left = Math.max(8, Math.min(x, innerWidth - 248)) + 'px';
     el.style.top = Math.max(8, Math.min(y, innerHeight - 180)) + 'px';
+    // popover/toggle via DOM: @types/react 18 (versão do lockfile) não tipa `popover` nem `ToggleEvent`.
+    el.popover = 'auto';
+    const aoAlternar = (e: Event) => { if ((e as ToggleEvent).newState === 'closed') fechar(); };
+    el.addEventListener('toggle', aoAlternar);
     el.showPopover(); el.querySelector('button')?.focus();
-    return () => { anterior?.focus(); };
+    return () => { el.removeEventListener('toggle', aoAlternar); anterior?.focus(); };
   }, []);
   const acao = (fn: () => void) => { fechar(); fn(); };
-  return createPortal(<div ref={ref} popover="auto" className="discipline-menu" role="menu" aria-label="Ações da disciplina" onToggle={e => { if (e.newState === 'closed') fechar(); }} onKeyDown={e => {
+  return createPortal(<div ref={ref} className="discipline-menu" role="menu" aria-label="Ações da disciplina" onKeyDown={e => {
     const botoes = [...e.currentTarget.querySelectorAll<HTMLButtonElement>('button')];
     const i = botoes.indexOf(document.activeElement as HTMLButtonElement);
     if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) {
