@@ -649,3 +649,98 @@ footer{text-align:center;color:var(--mut);font-size:13px;margin-top:40px}
 
 
 .sem label,.sem button{flex-shrink:0}
+
+/* ---------- guia: como trazer as notas ---------- */
+.guia-cta{display:grid;grid-template-columns:auto 1fr;column-gap:12px;align-items:center;width:100%;margin:-4px 0 14px;padding:12px 14px;border-radius:14px;background:var(--soft);border:1px solid var(--line);text-align:left;color:var(--ink);cursor:pointer;transition:border-color .2s}
+.guia-cta:hover{border-color:var(--lav)}
+.guia-cta:focus-visible{outline:2px solid var(--lav);outline-offset:2px}
+.guia-cta>span{grid-row:span 2;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:var(--peach);color:var(--navy);font-weight:800}
+.guia-cta b{font-size:14.5px}
+.guia-cta small{color:var(--mut);font-size:13px}
+.modal:has(.guia){width:min(640px,calc(100% - 32px))}
+.guia h3{margin:6px 0 2px}
+.guia-back{font-size:14px;padding:4px 0}
+.guia-tabs{margin:14px 0 4px;overflow-x:auto}
+.guia-tabs .seg button{white-space:nowrap;padding:9px 16px}
+.guia-intro{margin:12px 0 4px;color:var(--mut);font-size:14px}
+.guia-passos{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+.guia-passo{display:grid;grid-template-columns:230px 1fr;gap:16px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:16px;background:var(--card);animation:guia-in .3s ease-out backwards}
+.guia-texto{display:flex;gap:12px;align-items:flex-start}
+.guia-texto strong{display:block;font-size:15.5px;line-height:1.35;font-weight:600}
+.guia-texto strong b{font-weight:800}
+.guia-texto p{margin:4px 0 0;color:var(--mut);font-size:13.5px;line-height:1.45}
+.guia-num{flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;font-weight:700;font-size:14px}
+.guia-ok{margin-top:18px;width:100%}
+@media (prefers-color-scheme:dark){.guia-num{background:var(--lav)}}
+@media (max-width:560px){.guia-passo{grid-template-columns:1fr}}
+@keyframes guia-in{from{opacity:0;transform:translateY(6px)}}
+
+/* cenas: imitam uma página web clara, como o AULA de verdade, em qualquer tema */
+.guia-cena{position:relative;height:150px;border-radius:12px;background:#eef0f6;overflow:hidden;display:grid;place-items:center;font-family:system-ui,sans-serif;color:#2d3b45}
+.g-stage,.g-stack,.g-phone{position:relative;width:100%;height:100%;display:grid;place-items:center}
+.g-page{width:200px;border-radius:8px;background:#fff;box-shadow:0 4px 14px rgba(21,18,58,.12);overflow:hidden;font-size:8.5px;text-align:left}
+.g-bar{display:flex;align-items:center;gap:3px;padding:4px 6px;background:#f3f4f6;border-bottom:1px solid #e5e7eb;color:#6b7280;font-size:7px}
+.g-bar i{width:5px;height:5px;border-radius:50%;background:#d1d5db}
+.g-bar span{margin-left:6px}
+.g-body{display:grid;grid-template-columns:52px 1fr}
+.g-nav{display:grid;gap:3px;padding:6px 4px;border-right:1px solid #eef0f2;color:#0770a3}
+.g-nav span{padding:2px 3px;border-radius:3px}
+.g-nav .on{background:#2d3b45;color:#fff;font-weight:700}
+.g-grades{position:relative;padding:6px 7px;display:grid;gap:3px}
+.g-grades>b{font-size:10px}
+.g-row{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid #f0f1f3}
+.g-print{position:absolute;right:6px;top:4px;display:flex;align-items:center;gap:3px;padding:3px 6px;border-radius:4px;background:#f5f5f5;border:1px solid #c7cdd1;font-size:8px;color:#2d3b45}
+.g-print svg{width:10px;height:10px}
+.g-pulse{animation:g-pulse 1.8s ease-out infinite}
+@keyframes g-pulse{0%{box-shadow:0 0 0 0 rgba(242,180,138,.9)}70%,100%{box-shadow:0 0 0 7px rgba(242,180,138,0)}}
+.g-cursor{position:absolute;width:12px;height:16px;background:#111;clip-path:polygon(0 0,0 100%,30% 72%,52% 100%,64% 94%,44% 66%,85% 66%)}
+.g-cursor-print{animation:g-cursor 2.6s ease-in-out infinite}
+@keyframes g-cursor{0%{transform:translate(-50px,40px)}55%,100%{transform:translate(60px,-28px)}}
+/* seleção azul do Ctrl+A varrendo a página */
+.g-select .g-nav span,.g-select .g-grades>*,.g-select .g-bar span{animation:g-sel 3.2s ease-out infinite}
+.g-select .g-grades>*:nth-child(2){animation-delay:.08s}.g-select .g-grades>*:nth-child(3){animation-delay:.16s}.g-select .g-grades>*:nth-child(4){animation-delay:.24s}
+@keyframes g-sel{0%,18%{background:transparent}28%,100%{background:#b4d5fe}}
+.g-select .g-nav .on{animation:none;background:#2d3b45}
+.g-combo{position:absolute;bottom:8px;right:10px;display:flex;align-items:center;gap:4px;font:700 12px Outfit,system-ui,sans-serif;color:#15123a}
+.g-key{display:inline-grid;place-items:center;min-width:26px;height:24px;padding:0 6px;border-radius:6px;background:#fff;border:1px solid #c9ccd6;box-shadow:0 3px 0 #c9ccd6;font:700 11px Outfit,system-ui,sans-serif;color:#15123a}
+.g-press{animation:g-press 3.2s ease-out infinite}
+.g-press-2{animation-delay:.15s}
+@keyframes g-press{0%,8%{transform:none;box-shadow:0 3px 0 #c9ccd6}12%,20%{transform:translateY(3px);box-shadow:0 0 0 #c9ccd6;background:#fde7d6}26%,100%{transform:none;box-shadow:0 3px 0 #c9ccd6}}
+.g-toast{position:absolute;top:10px;left:50%;padding:3px 10px;border-radius:99px;background:#15123a;color:#fff;font:600 10px Outfit,system-ui,sans-serif;transform:translateX(-50%);animation:g-toast 3.2s ease-out infinite}
+@keyframes g-toast{0%,22%{opacity:0;transform:translate(-50%,4px)}30%,80%{opacity:1;transform:translate(-50%,0)}90%,100%{opacity:0}}
+.g-dialog{width:210px;padding:10px;border-radius:10px;background:#fff;box-shadow:0 6px 18px rgba(21,18,58,.16);display:grid;gap:7px;font-size:9.5px}
+.g-dialog>b{font-size:12px}
+.g-field{display:flex;justify-content:space-between;align-items:center}
+.g-select-box{padding:3px 6px;border:1px solid #c7cdd1;border-radius:5px;background:#fff}
+.g-actions{display:flex;justify-content:flex-end;gap:5px;margin-top:2px}
+.g-btn-blue{padding:4px 10px;border-radius:99px;background:#1a73e8;color:#fff;font-weight:600}
+.g-btn-ghost{padding:4px 8px;border-radius:99px;border:1px solid #dadce0;color:#1a73e8}
+.g-drop{position:relative;width:100%;height:100%}
+.g-drop-zone{position:absolute;left:14px;right:14px;bottom:12px;height:46px;display:grid;place-items:center;border:2px dashed #8c84ff;border-radius:10px;background:#f4f3ff;color:#4c44a8;font:600 11px Outfit,system-ui,sans-serif}
+.g-file{position:absolute;top:12px;left:calc(50% - 46px);display:grid;place-items:center;width:40px;height:50px;border-radius:5px;background:#fff;border:1px solid #e3e3ea;box-shadow:0 3px 8px rgba(21,18,58,.12);font:800 10px Outfit,system-ui,sans-serif;color:#d24545}
+.g-file small{font:500 6px system-ui,sans-serif;color:#6c6a8e;text-align:center;line-height:1.1}
+.g-fly{animation:g-fly 2.8s ease-in-out infinite}
+.g-fly-2{left:calc(50% + 6px);animation-delay:.35s}
+@keyframes g-fly{0%{transform:translateY(-8px);opacity:0}15%{opacity:1}55%,80%{transform:translateY(38px);opacity:1}100%{transform:translateY(46px);opacity:0}}
+.g-textarea{width:200px;height:74px;padding:7px;border-radius:8px;background:#fff;border:1.5px solid #8c84ff;font-size:8.5px;line-height:1.4;color:#2d3b45;text-align:left}
+.g-typed{display:block;clip-path:inset(0 100% 0 0);animation:g-type 3.2s steps(24,end) infinite}
+@keyframes g-type{0%,20%{clip-path:inset(0 100% 0 0)}55%,100%{clip-path:inset(0 0 0 0)}}
+.g-phone>.g-page,.g-phone>.g-textarea{transform:scale(.92)}
+.g-finger{position:absolute;left:56%;top:58%;width:22px;height:22px;border-radius:50%;background:rgba(81,69,184,.35);border:2px solid #5145b8;animation:g-hold 2.6s ease-out infinite}
+@keyframes g-hold{0%{transform:scale(.6);opacity:0}15%{opacity:1}60%,100%{transform:scale(1.15);opacity:.9}}
+.g-menu{position:absolute;display:flex;border-radius:8px;background:#2b2b2f;color:#fff;font-size:9px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+.g-menu span{padding:5px 8px}
+.g-menu span+span{border-left:1px solid #48484d}
+.g-menu .on{background:#5145b8;font-weight:700}
+.g-menu-a{left:30%;top:28%;animation:g-pop 2.6s ease-out infinite}
+.g-menu-b{left:26%;top:22%;animation:g-pop 3.2s ease-out infinite;animation-delay:.6s}
+.g-menu-c{left:24%;top:24%;animation:g-pop 2.6s ease-out infinite}
+@keyframes g-pop{0%,40%{opacity:0;transform:translateY(4px) scale(.96)}52%,100%{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){
+  .guia-passo,.guia-cena *{animation:none!important}
+  .g-select .g-nav span,.g-select .g-grades>*,.g-select .g-bar span{background:#b4d5fe}
+  .g-select .g-nav .on{background:#2d3b45}
+  .g-typed{clip-path:none}
+  .g-cursor-print{transform:translate(60px,-28px)}
+  .g-file{transform:translateY(38px)}
+}

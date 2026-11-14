@@ -4,6 +4,7 @@ import gsap from 'gsap';
 import type { Disc } from '../logic';
 import type { Fonte } from '../importacao';
 import { Ic, Img, Inp, Painel, T } from './ui';
+import { Guia } from './Guia';
 
 export function Confirmar({ open, titulo, texto, rotulo, onClose, onConfirmar }: {
   open: boolean; titulo: string; texto: string; rotulo: string; onClose: () => void; onConfirmar: () => void;
@@ -52,6 +53,8 @@ export function Importar({ open, onClose, onArquivo, onTexto, exportar, prog }: 
   const inp = useRef<HTMLInputElement>(null), bar = useRef<HTMLElement>(null), [on, setOn] = useState(false), [txt, setTxt] = useState('');
   const backup = useRef<HTMLInputElement>(null);
   const [fonte, setFonte] = useState<Fonte | 'passei' | ''>('');
+  const [guia, setGuia] = useState(false);
+  useLayoutEffect(() => { if (!open) setGuia(false); }, [open]);
   useLayoutEffect(() => { if (bar.current) gsap.to(bar.current, { width: (prog?.p ?? 0) * 100 + '%', duration: .4 * T }); }, [prog?.p]);
   if (prog) return <Painel open={open} onClose={onClose} className="modal" label="Lendo seus arquivos">
     <div className="import-loading" role="status" aria-live="polite" aria-busy="true">
@@ -61,6 +64,7 @@ export function Importar({ open, onClose, onArquivo, onTexto, exportar, prog }: 
       <small>Os arquivos são lidos neste navegador. As informações serão aplicadas ao final.</small>
     </div>
   </Painel>;
+  if (guia) return <Painel open={open} onClose={onClose} className="modal" label="Como trazer suas notas"><Guia voltar={() => setGuia(false)} /></Painel>;
   return <Painel open={open} onClose={onClose} className="modal" label="Importar e exportar dados">
     <h3>Importar e exportar</h3>
     <details className="backup-actions"><summary>Backup do Passei · importar ou exportar</summary>
@@ -70,6 +74,7 @@ export function Importar({ open, onClose, onArquivo, onTexto, exportar, prog }: 
     </details>
     <div className="or">notas do AULA e WebAluno</div>
     <p className="hint">Cole suas notas ou envie arquivos. G1 e G2 serão atualizadas no semestre selecionado. Confira os valores após importar.</p>
+    <button className="guia-cta" onClick={() => setGuia(true)}><span aria-hidden="true">?</span><b>Não sabe como pegar suas notas?</b><small>Veja o passo a passo com imagens</small></button>
     <div className={'drop' + (on ? ' on' : '')} role="button" tabIndex={prog ? -1 : 0} aria-disabled={!!prog} aria-label="Escolher arquivos de notas" onClick={() => { if (!prog) inp.current?.click(); }}
       onKeyDown={e => { if (!prog && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); inp.current?.click(); } }}
       onDragOver={e => { e.preventDefault(); setOn(true); }} onDragLeave={() => setOn(false)}
