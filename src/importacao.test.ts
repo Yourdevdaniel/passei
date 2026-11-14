@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { expect, test } from 'vitest';
-import { parseImportacao, aplicarImportacao } from './importacao';
+import { parseImportacao, aplicarImportacao, materiaDoBoletim } from './importacao';
 import { normalizar, novaDisc, resumoCurto } from './store';
 import { avaliar, calcGrau, type Db } from './logic';
 
@@ -105,8 +105,8 @@ test.each([[0, 1, 2], [2, 0, 1], [1, 2, 0]])('colar as três páginas em qualque
   expect(p.fonte).toBe('misto');
   const db = aplicarImportacao({ cur: 0, lista: [novaDisc('Minha disciplina', '2026/2')], semestre: '2026/2', valorCredito: '' }, p);
   expect(db.lista).toHaveLength(1);
-  expect(db.lista[0].g1.itens[0].nota).toBe('9,24');
-  expect(db.lista[0].g2.itens[0].nota).toBe('3,6');
+  expect(calcGrau(db.lista[0].g1).v).toBeNull();
+  expect(calcGrau(db.lista[0].g2).v).toBeNull();
   expect(db.lista[0].webAluno?.g1).toEqual([{ nome: 'G1', peso: '10', nota: '9' }]);
   expect(db.lista[0].webAluno?.g2).toEqual([{ nome: 'G2', peso: '10', nota: '' }]);
   expect(db.boletim?.map(n => n.nome)).toEqual(['PI EM TI I', 'CÁLCULO']);
@@ -179,4 +179,42 @@ test('uma disciplina com zero confirmado não é reaproveitada como se estivesse
 test('duas matérias do Canvas no mesmo texto não são fundidas silenciosamente', () => {
   const txt = 'Notas para Aluno\n25595 - BANCO DE DADOS AVANÇADO\nG1 90% 9 / 10\nG2 80% 8 / 10\nNotas para Aluno\n25213 - PI EM TI I\nG1 30% 3 / 10\nG2 20% 2 / 10';
   expect(() => parseImportacao(txt)).toThrow(/disciplina/i);
+});
+
+
+test('boletim preenche G1 e G2 nas disciplinas existentes do semestre selecionado', () => {
+  const a = novaDisc('Logica', '2026/2'), antiga = novaDisc('Logica', '2026/1');
+  a.g1.trab = '4'; a.g2.prova = '6';
+  const base = { cur: 0, lista: [a, antiga], semestre: '2026/2', valorCredito: '' };
+  const p = parseImportacao('WebAluno\nNotas\nDisciplina 1º 2º Média EXAME Média\nFinal Situação Freq\nLOGICA\t7,2\t9,2\t8,5\t-\t8,5\tAPR\t100,00');
+  const db = aplicarImportacao(base, p);
+  expect(calcGrau(db.lista[0].g1).v).toBe(7.2);
+  expect(calcGrau(db.lista[0].g2).v).toBe(9.2);
+  expect(db.lista[1]).toEqual(antiga);
+  expect(base.lista[0].g1.trab).toBe('4');
+  expect(db.boletim?.[0]).toMatchObject({ g1: '7,2', g2: '9,2' });
+});
+
+test('boletim pendente limpa a nota anterior e zero continua confirmado', () => {
+  const d = novaDisc('Logica', '2026/2'); d.g2.prova = '6';
+  const db = aplicarImportacao({ cur: 0, lista: [d], semestre: '2026/2', valorCredito: '' }, parseImportacao('WebAluno Notas\nLOGICA 0 - 0 - 0 REP 100'));
+  expect(calcGrau(db.lista[0].g1).v).toBe(0);
+  expect(calcGrau(db.lista[0].g2).v).toBeNull();
+});
+
+test('usar boletim explicitamente cria disciplina para simular sem inventar trabalhos', () => {
+  const p = parseImportacao('WebAluno Notas\nLOGICA 7,2 9,2 8,5 - 8,5 APR 100');
+  const db = aplicarImportacao({ cur: 0, lista: [novaDisc('Outra', '2026/2')], semestre: '2026/2', valorCredito: '' }, { fonte: 'web-notas', materias: [materiaDoBoletim(p.boletim![0])], avisos: [] });
+  expect(db.lista).toHaveLength(2);
+  expect(calcGrau(db.lista[1].g1).v).toBe(7.2);
+  expect(calcGrau(db.lista[1].g2).v).toBe(9.2);
+  expect(calcGrau(db.lista[1].g2).trabMax).toBe(0);
+});
+
+
+test('boletim prevalece sobre AULA de materia criada no mesmo lote misto', () => {
+  const p = parseImportacao('Notas para Aluno\nCurso\n25595 - LOGICA\nG1 90% 9 / 10\nG2 80% 8 / 10\nWebAluno Notas\nDisciplina 1º 2º Média EXAME Média Final Situação Freq\nLOGICA 7,2 9,2 8,5 - 8,5 APR 100');
+  const db = aplicarImportacao({ cur: 0, lista: [novaDisc('Outra', '2026/2')], semestre: '2026/2', valorCredito: '' }, p);
+  expect(calcGrau(db.lista[1].g1).v).toBe(7.2);
+  expect(calcGrau(db.lista[1].g2).v).toBe(9.2);
 });

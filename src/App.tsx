@@ -3,7 +3,7 @@ import gsap from 'gsap';
 import Lenis from 'lenis';
 import { avaliar, fmt, type Db, type Disc, type Grau as TGrau } from './logic';
 import { carregar, doSemestre, lerBackup, novaDisc, proximoSemestre, resetarDisciplina, salvar, semestres } from './store';
-import { aplicarImportacao, parseImportacao, type Fonte, type Importacao } from './importacao';
+import { aplicarImportacao, materiaDoBoletim, parseImportacao, type Fonte, type Importacao } from './importacao';
 import { adicionarDisciplinaTeste } from './exemplo';
 import { BoletimWeb, ParciaisWeb } from './components/WebAluno';
 import { lerArquivo } from './importar';
@@ -211,7 +211,11 @@ export default function App() {
       {erroSalvar && <aside className="error-notice" role="alert"><strong>Não foi possível salvar neste navegador.</strong><p>Exporte um backup antes de sair para guardar suas alterações.</p><button className="btn line" onClick={exportar}>Exportar dados</button></aside>}
       {offline && <p className="connection-notice" role="status">Você está sem conexão. As notas salvas continuam disponíveis; importar PDFs ou imagens pode precisar de internet.</p>}
       {avisosImportacao.length > 0 && <details className="import-details"><summary>Detalhes da importação ({avisosImportacao.length})</summary><ul>{avisosImportacao.map((a, i) => <li key={i}>{a}</li>)}</ul></details>}
-      {tela === 'painel' ? <><PainelView db={db} abrir={abrir} nova={nova} importar={() => setImp(true)} exportar={exportar} testar={testar} /><BoletimWeb notas={db.boletim} /></>
+      {tela === 'painel' ? <><PainelView db={db} abrir={abrir} nova={nova} importar={() => setImp(true)} exportar={exportar} testar={testar} /><BoletimWeb notas={db.boletim} usar={nota => {
+        setDb(prev => aplicarImportacao(prev, { fonte: 'web-notas', materias: [materiaDoBoletim(nota)], avisos: [] }));
+        setAba('sim'); ir('disc');
+        avisar('G1 e G2 do boletim aplicadas ao semestre selecionado.');
+      }} /></>
         : tela === 'creditos' ? <CreditosView db={db} setDb={setDb} abrir={abrir} nova={nova} />
         : <div>
           <div className="ph anim-in">
@@ -226,7 +230,7 @@ export default function App() {
             </div>
           </div>
           <ParciaisWeb notas={d.webAluno} />
-          {d.webAluno && <div className="sec-h"><h2>AULA · Notas e simulação</h2><span>Avaliações separadas do WebAluno</span></div>}
+          {d.webAluno && <div className="sec-h"><h2>Notas e simulação</h2><span>Avaliações e notas importadas</span></div>}
           <Trilha r={r} d={d} />
           <Resultado r={r} d={d} set={set} />
           <div className="tabs"><Seg label="Seção" value={aba} onChange={setAba} options={[['notas', 'Minhas notas'], ['sim', 'Simulador']]} /></div>

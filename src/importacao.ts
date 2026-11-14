@@ -57,6 +57,11 @@ export function parseImportacao(txt: string, fonte?: Fonte): Importacao {
   return out;
 }
 
+export function materiaDoBoletim(nota: NotaWeb): Materia {
+  const grau = (nota: string) => ({ modo: 'simples' as const, trabMax: '0', trab: '', prova: nota, extra: '', itens: [] });
+  return { curso: nota.nome, g1: grau(nota.g1), g2: grau(nota.g2), avisos: [] };
+}
+
 export function aplicarImportacao(db: Db, p: Importacao): Db {
   let boletim = db.boletim;
   if (p.boletim) {
@@ -66,7 +71,9 @@ export function aplicarImportacao(db: Db, p: Importacao): Db {
   }
   const lista = db.lista.slice();
   let cur = db.cur;
-  for (const materia of p.materias) {
+  const doBoletim = (p.boletim ?? []).filter(n => lista.some(d => d.semestre === db.semestre && chave(d.nome) === chave(n.nome)) || p.materias.some(m => m.curso && chave(m.curso) === chave(n.nome))).map(materiaDoBoletim);
+  // No lote misto, as notas oficiais do boletim prevalecem sobre os totais do AULA.
+  for (const materia of [...p.materias, ...doBoletim]) {
     const nome = materia.curso ? nomeBonito(materia.curso) : '';
     let i = nome ? lista.findIndex(d => chave(d.nome) === chave(nome) && d.semestre === db.semestre) : -1;
     if (i < 0) i = lista.findIndex(d => /^(Minha|Nova) disciplina$/.test(d.nome) && !d.webAluno && d.semestre === db.semestre && (['g1', 'g2'] as const).every(k => d[k].modo === 'simples' && d[k].trabMax === '4' && !d[k].itens.length && [d[k].trab, d[k].prova, d[k].extra].every(n => !String(n ?? '').trim())));
