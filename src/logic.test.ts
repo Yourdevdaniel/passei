@@ -89,3 +89,68 @@ test.each(['G1 92,4% 9,24 / 10,00\nG2 45% 3,60 / 8,00', 'G1 92,4% 9,24 / 10,00 G
   expect(a.g2.pend[0].max).toBe(2);
   expect(p.avisos.length).toBeGreaterThan(0);
 });
+
+test('percentuais sem pontuação não fecham graus nem inventam aprovação', () => {
+  const p = parseCanvas('G1 80%\nG2 90%');
+  const r = avaliar({ g1: p.g1!, g2: p.g2! });
+  expect(r.G1).toBeNull(); expect(r.G2).toBeNull();
+  expect(r.status).toBe('vazio');
+});
+
+test('substituição usa pontos de 10, sem transformar percentual em nota', () => {
+  expect(parseCanvas('Substituição 80% 8 / 10').sub).toBe('8');
+  expect(parseCanvas('Substituição 80% 4 / 5').sub).toBe('');
+  expect(parseCanvas('Substituição 80%').sub).toBe('');
+});
+
+test('lista vazia ou incompleta mantém os pontos não cadastrados pendentes', () => {
+  expect(calcGrau(lista()).v).toBeNull();
+  const g = calcGrau(lista({ tipo: 'trab', nota: '4', max: '4' }));
+  expect(g.v).toBeNull(); expect(g.known).toBe(4);
+  expect(g.pend.map(p => p.max)).toEqual([6]);
+});
+
+test('nota maior que o valor da avaliação não produz aprovação', () => {
+  const g = calcGrau(lista({ tipo: 'prova', nota: '20', max: '10' }), true);
+  expect(g.v).toBeNull(); expect(g.known).toBe(0);
+  expect(calcGrau(simples('4', '5', '6')).v).toBeNull();
+});
+
+test('avaliações que somam mais de 10 não fecham um grau com pontos sem escala', () => {
+  const g = lista({ tipo: 'trab', nota: '4', max: '5' }, { tipo: 'prova', nota: '5', max: '10' });
+  expect(calcGrau(g).v).toBeNull();
+  expect(avaliar({ g1: g, g2: simples('0', '', '5') }).status).toBe('vazio');
+});
+
+test('substituição e exame fora de 0 a 10 não aprovam o aluno', () => {
+  const base = { g1: simples('0', '', '3'), g2: simples('0', '', '3') };
+  expect(avaliar({ ...base, sub: '20' }).subUsada).toBeNull();
+  expect(avaliar({ ...base, sub: '20' }).status).toBe('exame');
+  expect(avaliar({ ...base, ef: '20' }).status).toBe('exame');
+});
+
+test('campos inativos do modo simples não invalidam o grau ao mudar a divisão', () => {
+  expect(calcGrau(simples('10', '8', '6')).v).toBe(8);
+  expect(calcGrau(simples('0', '4', '7')).v).toBe(7);
+});
+
+test('extração não é bônus e nota positiva em atividade de zero pontos é crédito extra', () => {
+  const p = parseCanvas('Trabalho de Extração de Dados\nG1\n4 / 4\nProva\nG1\n5 / 6\nParticipação\nG1\n0,5 / 0\nG1 95% 9,5 / 10');
+  expect(p.g1!.itens.find(i => i.nome.includes('Extração'))!.tipo).toBe('trab');
+  expect(calcGrau(p.g1!).v).toBeCloseTo(9.5);
+});
+
+test('zero publicado no Canvas continua sendo zero confirmado', () => {
+  const p = parseCanvas('G1 0% 0 / 10\nG2 N/A 0 / 0');
+  expect(calcGrau(p.g1!).v).toBe(0);
+  expect(calcGrau(p.g2!).v).toBeNull();
+});
+
+test('combinações válidas preservam a média e escolhem a melhor substituição', () => {
+  for (let g1 = 0; g1 <= 10; g1++) for (let g2 = 0; g2 <= 10; g2++) for (const sub of [0, 5, 10]) {
+    const r = avaliar({ g1: simples('0', '', String(g1)), g2: simples('0', '', String(g2)), sub: String(sub) });
+    const media = Math.max((g1 + 2 * g2) / 3, (sub + 2 * g2) / 3, (g1 + 2 * sub) / 3);
+    expect(r.mp).toBeCloseTo(media);
+    expect(r.status).toBe(media >= 6 ? 'aprovado' : 'exame');
+  }
+});

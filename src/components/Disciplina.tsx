@@ -37,6 +37,10 @@ export function Resultado({ r, d, set }: { r: Aval; d: Disc; set: SetDisc }) {
     chip = ['', 'Em andamento']; h = 'Notas em andamento';
     sub = 'G1 e G2 ainda têm notas pendentes. A média será calculada quando os graus estiverem completos.';
   }
+  if (r.g1.invalido || r.g2.invalido) {
+    chip = ['warn', 'Confira os valores']; h = 'Corrija as notas ou os valores';
+    sub = 'Cada nota deve respeitar o valor da avaliação, e as avaliações de cada grau devem somar 10 pontos, sem contar os extras.';
+  }
   if (r.status === 'falta') {
     const p = r.precisa!, falta = r.falta!, gr = falta === 'G1' ? r.g1 : r.g2;
     const onde = (p.pend.length > 2 ? 'notas que faltam' : p.pend.map(x => x.nome.toLowerCase()).join(' + ')) + ' do ' + falta;

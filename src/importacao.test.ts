@@ -167,3 +167,16 @@ test('grau ausente de um recorte não apaga uma nota anterior', () => {
 test('a tabela de pesos sozinha não é uma página com notas', () => {
   expect(() => parseImportacao('As tarefas são ponderadas por grupo:\nGrupo Peso\nG1 33%\nG2 67%\nTotal 100%')).toThrow();
 });
+
+test('uma disciplina com zero confirmado não é reaproveitada como se estivesse vazia', () => {
+  const d = novaDisc('Minha disciplina', '2026/2');
+  d.g1.trab = '0';
+  const db = aplicarImportacao({ cur: 0, lista: [d], semestre: '2026/2', valorCredito: '' }, parseImportacao('Notas para Aluno\n25595 - BANCO DE DADOS AVANÇADO\nG1 90% 9 / 10'));
+  expect(db.lista).toHaveLength(2);
+  expect(db.lista[0]).toEqual(d);
+});
+
+test('duas matérias do Canvas no mesmo texto não são fundidas silenciosamente', () => {
+  const txt = 'Notas para Aluno\n25595 - BANCO DE DADOS AVANÇADO\nG1 90% 9 / 10\nG2 80% 8 / 10\nNotas para Aluno\n25213 - PI EM TI I\nG1 30% 3 / 10\nG2 20% 2 / 10';
+  expect(() => parseImportacao(txt)).toThrow(/disciplina/i);
+});

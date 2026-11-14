@@ -1,4 +1,4 @@
-import { calcGrau, fmt, num, parseCanvas, type Db, type Importado, type NotaWeb, type ParcialWeb } from './logic';
+import { fmt, num, parseCanvas, type Db, type Importado, type NotaWeb, type ParcialWeb } from './logic';
 import { nomeBonito, novaDisc } from './store';
 
 export type Fonte = 'aula' | 'web-notas' | 'web-parciais' | 'misto';
@@ -69,7 +69,7 @@ export function aplicarImportacao(db: Db, p: Importacao): Db {
   for (const materia of p.materias) {
     const nome = materia.curso ? nomeBonito(materia.curso) : '';
     let i = nome ? lista.findIndex(d => chave(d.nome) === chave(nome) && d.semestre === db.semestre) : -1;
-    if (i < 0) i = lista.findIndex(d => /^(Minha|Nova) disciplina$/.test(d.nome) && !d.webAluno && d.semestre === db.semestre && (['g1', 'g2'] as const).every(k => { const c = calcGrau(d[k], false); return !c.known && !c.e; }));
+    if (i < 0) i = lista.findIndex(d => /^(Minha|Nova) disciplina$/.test(d.nome) && !d.webAluno && d.semestre === db.semestre && (['g1', 'g2'] as const).every(k => d[k].modo === 'simples' && d[k].trabMax === '4' && !d[k].itens.length && [d[k].trab, d[k].prova, d[k].extra].every(n => !String(n ?? '').trim())));
     if (i < 0) { i = lista.length; lista.push(novaDisc(nome || 'Disciplina importada', db.semestre)); }
     const alvo = { ...lista[i] };
     if (nome) alvo.nome = nome;

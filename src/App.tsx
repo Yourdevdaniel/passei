@@ -207,7 +207,7 @@ export default function App() {
           {aba === 'notas' ? <div className="graus">
             <Grau key={d.id + 'g1'} k="g1" g={d.g1} gr={r.g1} setG={setGrau('g1')} min={r.min} usado={r.subUsada === 'G1'} />
             <Grau key={d.id + 'g2'} k="g2" g={d.g2} gr={r.g2} setG={setGrau('g2')} min={r.min} usado={r.subUsada === 'G2'} />
-          </div> : <Simulador key={d.id} r={r} />}
+          </div> : r.g1.invalido || r.g2.invalido ? <p className="aviso">Corrija os valores das avaliações antes de simular.</p> : <Simulador key={d.id} r={r} />}
           <div className="sec-h" style={{ marginTop: 40 }}><h2>Como é calculado</h2><span>modelo de notas da ULBRA</span></div>
           <div className="forms" style={{ marginTop: 0 }}>
             <div className="card fc anim-in">

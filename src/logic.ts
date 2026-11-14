@@ -15,7 +15,7 @@ export interface NotaWeb { nome: string; g1: string; g2: string; media: string; 
 export interface Db { cur: number; lista: Disc[]; semestre: string; valorCredito: string; boletim?: NotaWeb[] }
 
 export interface Pend { nome: string; max: number; tipo: Tipo }
-export interface GrauCalc { v: number | null; known: number; e: number; pend: Pend[]; trabMax: number; provaMax: number; trabTem: number }
+export interface GrauCalc { v: number | null; known: number; e: number; pend: Pend[]; trabMax: number; provaMax: number; trabTem: number; invalido: boolean }
 export interface Precisa { valor: number; max: number; pend: Pend[] }
 export type Status = 'vazio' | 'falta' | 'aprovado' | 'exame' | 'impossivel' | 'aprovado-exame' | 'reprovado';
 export interface Aval {
@@ -48,24 +48,33 @@ export function itemPendente(it: Pick<Item, 'nota' | 'data'>): boolean {
 // Campo vazio = nota que ainda não saiu (pendente).
 export function calcGrau(g: Pick<Grau, 'modo'> & Partial<Grau>, limitar?: boolean): GrauCalc {
   let known = 0, e = 0, trabMax = 0, provaMax = 0, trabTem = 0;
+  let invalido = false;
   const pend: Pend[] = [];
   if (g.modo === 'lista') {
     for (const it of g.itens ?? []) {
-      const n = num(it.nota), m = num(it.max) || 0;
-      if (it.tipo === 'extra') { e += n || 0; continue; }
+      const n = num(it.nota), m = Math.max(0, num(it.max) || 0);
+      if (it.tipo === 'extra') { if (n !== null && n < 0) invalido = true; else e += n || 0; continue; }
       if (it.tipo === 'trab') trabMax += m; else provaMax += m;
-      if (itemPendente(it)) pend.push({ nome: it.nome || (it.tipo === 'trab' ? 'Trabalho' : 'Prova'), max: m, tipo: it.tipo });
+      if ((num(it.max) ?? 0) < 0 || n !== null && (n < 0 || n > m + EPS)) invalido = true;
+      if (itemPendente(it) || n! < 0 || n! > m + EPS) pend.push({ nome: it.nome || (it.tipo === 'trab' ? 'Trabalho' : 'Prova'), max: m, tipo: it.tipo });
       else { known += n!; if (it.tipo === 'trab') trabTem += n!; }
+    }
+    const faltando = 10 - trabMax - provaMax;
+    if (faltando > EPS) pend.push({ nome: 'Pontos ainda não cadastrados', max: faltando, tipo: 'prova' });
+    if (faltando < -EPS) {
+      invalido = true;
+      pend.push({ nome: 'Confira os valores: avaliações acima de 10 pontos', max: 0, tipo: 'prova' });
     }
   } else {
     trabMax = Math.min(10, Math.max(0, num(g.trabMax) ?? 0)); provaMax = 10 - trabMax; e = num(g.extra) || 0;
     const t = num(g.trab), p = num(g.prova);
-    if (trabMax > 0) { if (t === null) pend.push({ nome: 'Trabalhos', max: trabMax, tipo: 'trab' }); else { known += t; trabTem = t; } }
-    if (provaMax > 0) { if (p === null) pend.push({ nome: 'Prova', max: provaMax, tipo: 'prova' }); else known += p; }
+    invalido = (num(g.trabMax) ?? 0) < 0 || (num(g.trabMax) ?? 0) > 10 || (trabMax > 0 && t !== null && (t < 0 || t > trabMax + EPS)) || (provaMax > 0 && p !== null && (p < 0 || p > provaMax + EPS)) || e < 0;
+    if (trabMax > 0) { if (t === null || t < 0 || t > trabMax + EPS) pend.push({ nome: 'Trabalhos', max: trabMax, tipo: 'trab' }); else { known += t; trabTem = t; } }
+    if (provaMax > 0) { if (p === null || p < 0 || p > provaMax + EPS) pend.push({ nome: 'Prova', max: provaMax, tipo: 'prova' }); else known += p; }
   }
-  let v = pend.length ? null : known + e;
+  let v = pend.length || invalido ? null : known + e;
   if (v !== null && limitar) v = Math.min(10, v);
-  return { v, known, e, pend, trabMax, provaMax, trabTem };
+  return { v, known, e, pend, trabMax, provaMax, trabTem, invalido };
 }
 
 const precisa = (alvo: number, gr: GrauCalc): Precisa =>
@@ -75,20 +84,22 @@ export function avaliar(d: Notas): Aval {
   const min = num(d.minimo) ?? 6;
   const g1 = calcGrau(d.g1, d.limitar), g2 = calcGrau(d.g2, d.limitar);
   let G1 = g1.v, G2 = g2.v, subUsada: Aval['subUsada'] = null;
-  const sub = num(d.sub);
+  const subDigitada = num(d.sub);
+  const sub = subDigitada !== null && subDigitada >= 0 && subDigitada <= 10 ? subDigitada : null;
   if (sub !== null && G1 !== null && G2 !== null) {
     const base = (G1 + 2 * G2) / 3, trocaG1 = (sub + 2 * G2) / 3, trocaG2 = (G1 + 2 * sub) / 3;
     if (trocaG2 >= trocaG1 && trocaG2 > base) { G2 = sub; subUsada = 'G2'; }
     else if (trocaG1 > base) { G1 = sub; subUsada = 'G1'; }
   }
   const r: Aval = { g1, g2, G1, G2, subUsada, min, status: 'vazio' };
+  if (g1.invalido || g2.invalido) return r;
   if (G1 !== null && G2 !== null) {
     r.mp = (G1 + 2 * G2) / 3;
     if (r.mp >= min - EPS) r.status = 'aprovado';
     else {
       r.efPrecisa = (3 * min - r.mp) / 2;
       const ef = num(d.ef);
-      if (ef !== null) { r.mf = (r.mp + 2 * ef) / 3; r.status = r.mf >= min - EPS ? 'aprovado-exame' : 'reprovado'; }
+      if (ef !== null && ef >= 0 && ef <= 10) { r.mf = (r.mp + 2 * ef) / 3; r.status = r.mf >= min - EPS ? 'aprovado-exame' : 'reprovado'; }
       else r.status = r.efPrecisa > 10 + EPS ? 'impossivel' : 'exame';
     }
   } else if (G1 !== null) { r.status = 'falta'; r.falta = 'G2'; r.alvo = (3 * min - G1) / 2; r.precisa = precisa(r.alvo, g2); }
@@ -102,22 +113,25 @@ export function simular(G1: number, g2Trab: number, g2Extra: number, g2ProvaMax:
   return { alvo, prova: alvo - g2Trab - g2Extra, provaMax: g2ProvaMax };
 }
 
-const tipoDe = (nome: string): Tipo => /extra|b[ôo]nus/i.test(nome) ? 'extra' : /^G[12]$|prova|exame|avalia[çc][ãa]o|teste/i.test(nome) ? 'prova' : 'trab';
+const tipoDe = (nome: string): Tipo => /(?:^|[^\p{L}\p{N}])(?:extra|b[ôo]nus)(?=$|[^\p{L}\p{N}])/iu.test(nome) ? 'extra' : /^G[12]$|prova|exame|avalia[çc][ãa]o|teste/i.test(nome) ? 'prova' : 'trab';
 
 export interface Importado { g1?: Grau; g2?: Grau; sub?: string; curso?: string; avisos: string[] }
 
 // Lê a página de notas do Canvas: texto copiado, PDF com texto ou texto vindo do OCR
 export function parseCanvas(txt: string): Importado {
+  const cursos = [...txt.matchAll(/(\d{4,6} - [A-ZÀ-Ý0-9][A-ZÀ-Ý0-9 ,.()&-]{2,80}?)(?=\s+G[12]\b|\s+[A-Z]?[a-z]|\s*$|\s+https?|\s+\d)/gm)];
+  if (new Set(cursos.map(m => m[1].split(' - ')[0])).size > 1) throw new Error('Cole uma disciplina do AULA por vez ou envie PDFs separados para cada disciplina.');
   const notas = txt.split(/As tarefas são ponderadas por grupo|Grupo\s+Peso/i)[0];
   const N = '(\\d+(?:[.,]\\d+)?)';
   const SC = new RegExp(`${N}\\s*\\/\\s*${N}`);
   const itens: Record<'g1' | 'g2', Item[]> = { g1: [], g2: [] };
   const add = (grau: string, nome: string, nota: string, max: string) => {
-    if (num(max) === 0) return; // Atividades sem pontos não participam do fechamento do grau.
+    const bonus = num(max) === 0 && (num(nota) ?? 0) > 0;
+    if (num(max) === 0 && !bonus) return;
     nome = nome.split(/\||\d+(?:[.,]\d+)?\s*\//)[0];
     for (let i = 0; i < 3; i++) nome = nome.replace(/[^\p{L}\p{N})]+$/u, '').replace(/\s+[^\s\d]{1,2}$/, ''); // lixo do OCR no fim
     nome = nome.trim() || 'Item';
-    itens[grau.toLowerCase() as 'g1' | 'g2'].push({ id: uid(), nome, tipo: tipoDe(nome), nota: nota === '-' ? '' : fmt(num(nota)!), max: fmt(num(max)!), data: '' });
+    itens[grau.toLowerCase() as 'g1' | 'g2'].push({ id: uid(), nome, tipo: bonus ? 'extra' : tipoDe(nome), nota: nota === '-' ? '' : fmt(num(nota)!), max: fmt(num(max)!), data: '' });
   };
   const lines = txt.split(/\r?\n/).map(l => l.trim());
   const titulo = (l: string) => /^(G[12])\s*[-–—]\s*(.*)$/.exec(l);
@@ -158,21 +172,25 @@ export function parseCanvas(txt: string): Importado {
   for (const m of notas.matchAll(/(?:^|\s)(G1|G2|Substitui\S*)\s+N\/A\b/g)) semNota.add(m[1].startsWith('S') ? 'sub' : m[1].toLowerCase());
   const out: Importado = { avisos: [] };
   for (const k of ['g1', 'g2'] as const) {
-    const resumo = pontos[k], p = resumo?.nota ?? pct[k];
-    const lista: Item[] | null = itens[k].length ? itens[k] : p != null || semNota.has(k) ? [{ id: uid(), nome: 'Nota do ' + k.toUpperCase(), tipo: 'prova', nota: p == null ? '' : fmt(p), max: fmt(resumo?.max ?? 10), data: '' }] : null;
+    const resumo = pontos[k], p = resumo?.nota;
+    const lista: Item[] | null = itens[k].length ? itens[k] : p != null || pct[k] !== undefined || semNota.has(k) ? [{ id: uid(), nome: 'Nota do ' + k.toUpperCase(), tipo: 'prova', nota: p == null ? '' : fmt(p), max: fmt(resumo?.max ?? 10), data: '' }] : null;
     if (!lista) continue;
     const total = lista.filter(i => i.tipo !== 'extra').reduce((s, i) => s + (num(i.max) || 0), 0);
     if (total < 10 - EPS) {
       lista.push({ id: uid(), nome: 'Pontos a conferir', tipo: 'prova', nota: '', max: fmt(10 - total), data: '' });
       out.avisos.push(`${k.toUpperCase()}: foram identificados ${fmt(total)} de 10 pontos. Confira os ${fmt(10 - total)} pontos restantes; eles ficaram pendentes.`);
     }
-    if (!resumo && !itens[k].length && pct[k] !== undefined) out.avisos.push(`${k.toUpperCase()}: só foi encontrado o percentual. Confira a nota e o valor total no Canvas.`);
+    if (!resumo && !itens[k].length && pct[k] !== undefined) out.avisos.push(`${k.toUpperCase()}: percentual sem pontuação. O grau ficou pendente; confira os pontos no Canvas.`);
     out[k] = { modo: 'lista', trabMax: '4', trab: '', prova: '', extra: '', itens: lista };
     const soma = lista.reduce((s, i) => s + (num(i.nota) || 0), 0);
     if (p != null && Math.abs(soma - p) > 0.06) out.avisos.push(`${k.toUpperCase()}: itens somam ${fmt(soma)}, o Canvas diz ${fmt(p)}`);
   }
   if (semNota.has('sub')) out.sub = '';
-  else if (pct.sub !== undefined) out.sub = fmt(pct.sub);
-  out.curso = (txt.match(/(\d{4,6} - [A-ZÀ-Ý0-9][A-ZÀ-Ý0-9 ,.()&-]{2,80}?)(?=\s+G[12]\b|\s+[A-Z]?[a-z]|\s*$|\s+https?|\s+\d)/m) || [])[1];
+  else if (pct.sub !== undefined) {
+    const sc = /Substitui\S*\s+\d+(?:[.,]\d+)?\s*%\s*(\d+(?:[.,]\d+)?)\s*\/\s*(\d+(?:[.,]\d+)?)/.exec(notas);
+    out.sub = sc && num(sc[2]) === 10 ? fmt(num(sc[1])!) : '';
+    if (!sc || num(sc[2]) !== 10) out.avisos.push('Substituição sem pontuação completa de 10 pontos. A nota ficou pendente.');
+  }
+  out.curso = cursos[0]?.[1];
   return out;
 }

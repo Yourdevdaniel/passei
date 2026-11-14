@@ -65,6 +65,7 @@ export const tom = (v: number | null | undefined, min: number): Tom => v == null
 export const chipTom = (t: Tom) => t === 'peach' ? '' : t;
 
 export function resumoCurto(r: Aval): Resumo {
+  if (r.g1.invalido || r.g2.invalido) return { tone: 'warn', label: 'Confira os valores', txt: 'Há notas ou valores de avaliações fora da escala.', v: null, max: 10 };
   if (r.status === 'vazio') return r.g1.known + r.g1.e + r.g2.known + r.g2.e > 0
     ? { tone: '', label: 'Em andamento', txt: 'G1 e G2 ainda têm notas pendentes.', v: null, max: 10 }
     : { tone: '', label: 'Sem notas', txt: 'Comece colocando as notas.', v: null, max: 10 };
