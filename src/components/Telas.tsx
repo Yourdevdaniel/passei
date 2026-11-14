@@ -32,9 +32,9 @@ export function PainelView({ db, abrir, nova, importar }: Nav & { db: Db; import
     {!comNota.length ? <div>
       <div className="sec-h"><h2>Como funciona</h2></div>
       <div className="passos">
-        <div className="card passo anim-in"><i>1</i><h3>Traga suas notas</h3><p>Importe o PDF de notas do Canvas ou digite na disciplina.</p></div>
-        <div className="card passo anim-in"><i>2</i><h3>Deixe vazio o que não saiu</h3><p>O sistema calcula quanto você precisa nessa nota.</p></div>
-        <div className="card passo anim-in"><i>3</i><h3>Simule</h3><p>Teste notas da G1 e veja o que sobra para a prova da G2.</p></div>
+        <div className="card passo anim-in"><Img name="passo1" /><i>1</i><h3>Traga suas notas</h3><p>Importe o PDF de notas do Canvas ou digite na disciplina.</p></div>
+        <div className="card passo anim-in"><Img name="passo2" /><i>2</i><h3>Deixe vazio o que não saiu</h3><p>O sistema calcula quanto você precisa nessa nota.</p></div>
+        <div className="card passo anim-in"><Img name="passo3" /><i>3</i><h3>Simule</h3><p>Teste notas da G1 e veja o que sobra para a prova da G2.</p></div>
       </div>
     </div> : <div className="stats">
       <div className="card stat anim-in"><small>Disciplinas em {db.semestre}</small><b>{rs.length}</b></div>

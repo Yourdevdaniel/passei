@@ -332,3 +332,4 @@ footer{text-align:center;color:var(--mut);font-size:13px;margin-top:40px}
   .ag.cr em{grid-column:auto;text-align:right}
   .ag.cr.cr-h{display:none}
 }
+.passo .slot{width:110px;margin:-6px 0 12px}
