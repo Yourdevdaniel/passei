@@ -1,7 +1,7 @@
 // Tela de uma disciplina: trilha, resultado, G1/G2 e simulador
 import { useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import gsap from 'gsap';
-import { calcGrau, EPS, fmt, itemPendente, num, simular, uid, type Aval, type Disc, type Grau as TGrau, type GrauCalc, type Item as TItem, type Tipo } from '../logic';
+import { calcGrau, EPS, fmt, itemPendente, num, simular, tomSimulacao, uid, type Aval, type Disc, type Grau as TGrau, type GrauCalc, type Item as TItem, type Tipo } from '../logic';
 import { tom } from '../store';
 import { Ic, Img, Inp, Num, Ring, Seg, T, useAnim } from './ui';
 
@@ -185,25 +185,32 @@ export function Simulador({ r }: { r: Aval }) {
   const min = r.min, g2 = r.g2;
   const [g1s, setG1] = useState<number | null>(null), [t2s, setT2] = useState<number | null>(null);
   const G1 = g1s ?? r.G1 ?? 6;
-  const tMax = g2.trabMax, pMax = g2.provaMax;
+  const [divisao, setDivisao] = useState<number | null>(null);
+  const tMax = divisao ?? g2.trabMax, pMax = divisao === null ? g2.provaMax : 10 - tMax;
   const T2 = Math.min(tMax, t2s ?? g2.trabTem);
   const s = simular(G1, T2, g2.e, pMax, min);
-  let h: ReactNode, p: ReactNode, tone = 'peach';
-  if (s.prova <= EPS) { h = 'Já garantido'; p = 'Pode tirar 0 na prova da G2.'; tone = 'ok'; }
-  else if (s.prova <= pMax + EPS) { h = `${fmt(s.prova)} na prova da G2`; p = `Para fechar a G2 em ${fmt(s.alvo)}.`; tone = s.prova / pMax > .8 ? 'warn' : 'peach'; }
+  let h: ReactNode, p: ReactNode;
+  const tone = tomSimulacao(s.prova, pMax);
+  if (s.prova <= EPS) { h = 'Já garantido'; p = 'Pode tirar 0 na prova da G2.'; }
+  else if (s.prova <= pMax + EPS) { h = `${fmt(s.prova)} na prova da G2`; p = `Para fechar a G2 em ${fmt(s.alvo)}.`; }
   else {
-    const t = s.alvo - pMax - g2.e; tone = 'bad';
+    const t = s.alvo - pMax - g2.e;
     h = 'Direto não dá';
     p = t <= tMax + EPS ? `Com prova cheia, precisa de ${fmt(t)} nos trabalhos.` : 'Com essa G1, vai pro exame.';
   }
-  const tiles = Array.from({ length: 11 }, (_, i) => { const x = simular(i, T2, g2.e, pMax, min).prova; return { i, x, c: x <= EPS ? 'ok' : x > pMax + EPS ? 'bad' : x / pMax > .8 ? 'warn' : 'mid' }; });
+  const tiles = Array.from({ length: 11 }, (_, i) => { const x = simular(i, T2, g2.e, pMax, min).prova; return { i, x, c: tomSimulacao(x, pMax) }; });
   return <section className="card sim anim-in">
     <div className="sim-controls">
-      <button className="btn line" onClick={() => { setG1(null); setT2(null); }}>Restaurar minhas notas</button>
+      <button className="btn line" onClick={() => { setG1(null); setT2(null); setDivisao(null); }}>Restaurar minhas notas</button>
       <p className="hint">A simulação não altera suas notas salvas.{r.G1 == null ? ' Sem G1 concluída, usamos 6 como ponto de partida.' : ''}</p>
     </div>
     <div>
       <Slider label="Se eu tirar na G1" value={G1} max={10} real={r.G1} onChange={setG1} onReset={() => setG1(null)} />
+      <details className="sim-division">
+        <summary>Divisão da G2: trabalhos {fmt(tMax)} + prova {fmt(pMax)} · ajustar</summary>
+        <p className="hint">Só nesta simulação. Trabalhos e prova somam 10 pontos.</p>
+        <Slider label="Valor total dos trabalhos da G2" value={tMax} max={10} real={null} onChange={v => { setDivisao(v); setT2(null); }} onReset={() => setDivisao(null)} />
+      </details>
       {tMax > 0 && <Slider label="Trabalhos da G2 (já tenho)" value={T2} max={tMax} real={g2.trabTem} onChange={setT2} onReset={() => setT2(null)} />}
       <div className="grid-t">
         <h4>Nota da G1 → quanto precisa na prova da G2</h4>

@@ -194,3 +194,5 @@ export function parseCanvas(txt: string): Importado {
   out.curso = cursos[0]?.[1];
   return out;
 }
+
+export const tomSimulacao = (prova: number, max: number) => prova <= EPS ? 'ok' : prova > max + EPS ? 'bad' : prova > max * .8 + EPS ? 'warn' : 'mid';

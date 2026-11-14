@@ -561,3 +561,8 @@ footer{text-align:center;color:var(--mut);font-size:13px;margin-top:40px}
   :root{--accent-ink:var(--lav);--ok-ink:var(--ok);--warn-ink:var(--warn);--bad-ink:var(--bad);--peach-ink:var(--peach)}
   .seg button[aria-selected=true]{color:var(--navy)}
 }
+
+.sim-division{margin:0 0 20px;padding:12px 14px;border:1px solid var(--line);border-radius:12px}
+.sim-division summary{cursor:pointer;font-size:14px;font-weight:600;min-height:24px}
+.sim-division[open] summary{margin-bottom:12px}
+.sim-division .sl{margin-bottom:0}

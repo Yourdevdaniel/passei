@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { expect, test } from 'vitest';
-import { avaliar, calcGrau, parseCanvas, simular, type Grau, type Importado, type Item } from './logic';
+import { avaliar, calcGrau, parseCanvas, simular, tomSimulacao, type Grau, type Importado, type Item } from './logic';
 
 const simples = (trabMax: string, trab: string, prova: string, extra = ''): Grau => ({ modo: 'simples', trabMax, trab, prova, extra, itens: [] });
 const lista = (...itens: Partial<Item>[]): Grau => ({ modo: 'lista', trabMax: '4', trab: '', prova: '', extra: '', itens: itens as Item[] });
@@ -153,4 +153,16 @@ test('combinações válidas preservam a média e escolhem a melhor substituiç�
     expect(r.mp).toBeCloseTo(media);
     expect(r.status).toBe(media >= 6 ? 'aprovado' : 'exame');
   }
+});
+
+
+test('simulation tones share thresholds including zero proof capacity', () => {
+  expect(tomSimulacao(6.2, 10)).toBe('mid');
+  expect(tomSimulacao(6, 6)).toBe('warn');
+  expect(tomSimulacao(8, 10)).toBe('mid');
+  expect(tomSimulacao(8.1, 10)).toBe('warn');
+  expect(tomSimulacao(7, 6)).toBe('bad');
+  expect(tomSimulacao(0, 0)).toBe('ok');
+  expect(tomSimulacao(1, 0)).toBe('bad');
+  expect(simular(6, 2, 0, 6, 6).prova).toBe(4);
 });
